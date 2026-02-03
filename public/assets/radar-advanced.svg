@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2">
+  <!-- Advanced radar - larger dish + antennas -->
+  <rect x="26" y="38" width="12" height="22" fill="hsl(220,20%,25%)"/>
+  <ellipse cx="32" cy="26" rx="20" ry="12" fill="hsl(30,80%,40%)"/>
+  <circle cx="32" cy="26" r="7" fill="hsl(30,100%,55%)"/>
+  <line x1="8" y1="26" x2="18" y2="18" stroke="hsl(30,100%,50%)" stroke-width="2"/>
+  <line x1="56" y1="26" x2="46" y2="18" stroke="hsl(30,100%,50%)" stroke-width="2"/>
+  <circle cx="18" cy="18" r="3" fill="hsl(30,100%,60%)"/>
+  <circle cx="46" cy="18" r="3" fill="hsl(30,100%,60%)"/>
+  <rect x="30" y="56" width="4" height="6" fill="hsl(220,20%,20%)"/>
+</svg>

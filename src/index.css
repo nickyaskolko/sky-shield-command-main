@@ -1,0 +1,271 @@
+@import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Sky Shield Game Design System - מערכת עיצוב מגן השמיים
+   Cold Tech Aesthetic - אסתטיקה טכנולוגית קרה
+   All colors in HSL format
+*/
+
+@layer base {
+  :root {
+    /* Base colors - Light mode (fallback) */
+    --background: 220 30% 8%;
+    --foreground: 185 50% 90%;
+
+    --card: 220 30% 12%;
+    --card-foreground: 185 50% 90%;
+
+    --popover: 220 30% 10%;
+    --popover-foreground: 185 50% 90%;
+
+    --primary: 185 100% 50%;
+    --primary-foreground: 220 30% 8%;
+
+    --secondary: 260 100% 60%;
+    --secondary-foreground: 185 50% 90%;
+
+    --muted: 220 30% 15%;
+    --muted-foreground: 185 30% 60%;
+
+    --accent: 185 100% 50%;
+    --accent-foreground: 220 30% 8%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 185 100% 50% / 0.2;
+    --input: 185 100% 50% / 0.2;
+    --ring: 185 100% 50%;
+
+    --radius: 0.75rem;
+
+    /* Game-specific tokens */
+    --game-bg: 220 30% 6%;
+    --game-panel: 220 30% 10%;
+    --game-accent: 185 100% 50%;
+    --game-accent-glow: 185 100% 50% / 0.5;
+    --game-text: 185 50% 90%;
+    --game-text-dim: 185 30% 60%;
+    --game-danger: 0 100% 60%;
+    --game-warning: 45 100% 50%;
+    --game-success: 120 100% 40%;
+
+    /* Sidebar - game theme */
+    --sidebar-background: 220 30% 8%;
+    --sidebar-foreground: 185 50% 90%;
+    --sidebar-primary: 185 100% 50%;
+    --sidebar-primary-foreground: 220 30% 8%;
+    --sidebar-accent: 220 30% 15%;
+    --sidebar-accent-foreground: 185 50% 90%;
+    --sidebar-border: 185 100% 50% / 0.2;
+    --sidebar-ring: 185 100% 50%;
+  }
+
+  /* Dark mode is the default for this game */
+  .dark {
+    --background: 220 30% 8%;
+    --foreground: 185 50% 90%;
+
+    --card: 220 30% 12%;
+    --card-foreground: 185 50% 90%;
+
+    --popover: 220 30% 10%;
+    --popover-foreground: 185 50% 90%;
+
+    --primary: 185 100% 50%;
+    --primary-foreground: 220 30% 8%;
+
+    --secondary: 260 100% 60%;
+    --secondary-foreground: 185 50% 90%;
+
+    --muted: 220 30% 15%;
+    --muted-foreground: 185 30% 60%;
+
+    --accent: 185 100% 50%;
+    --accent-foreground: 220 30% 8%;
+
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 185 100% 50% / 0.2;
+    --input: 185 100% 50% / 0.2;
+    --ring: 185 100% 50%;
+  }
+
+  .theme-light {
+    --game-bg: 220 20% 92%;
+    --game-panel: 220 20% 88%;
+    --game-accent: 185 80% 35%;
+    --game-accent-glow: 185 80% 35% / 0.4;
+    --game-text: 220 30% 18%;
+    --game-text-dim: 220 20% 45%;
+    --game-danger: 0 70% 45%;
+    --game-warning: 38 90% 45%;
+    --game-success: 120 60% 32%;
+  }
+
+  .accessibility-high-contrast {
+    --game-text: 0 0% 100%;
+    --game-text-dim: 0 0% 85%;
+    --game-accent: 185 100% 60%;
+    --game-danger: 0 100% 55%;
+    --game-warning: 45 100% 55%;
+    --game-success: 120 100% 45%;
+  }
+
+  .accessibility-large-text {
+    font-size: 1.125rem;
+  }
+  .accessibility-large-text .text-sm { font-size: 1rem; }
+  .accessibility-large-text .text-lg { font-size: 1.35rem; }
+  .accessibility-large-text .text-xl { font-size: 1.5rem; }
+
+  .accessibility-reduce-motion *,
+  .reduce-motion * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  /* Game UI – subtle screen shake for damage feedback (CSS-only, optional) */
+  .game-shake {
+    animation: game-shake 0.35s ease-out;
+  }
+  @keyframes game-shake {
+    0%, 100% { transform: translate(0, 0); }
+    25% { transform: translate(-3px, 1px); }
+    50% { transform: translate(2px, -2px); }
+    75% { transform: translate(2px, 1px); }
+  }
+  .accessibility-reduce-motion .game-shake,
+  .reduce-motion .game-shake {
+    animation: none;
+  }
+
+  /* נגישות: כיבוי אנימציות לפי העדפת מערכת (ת"י 5568 / WCAG) */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* נגישות: מיקוד מקלדת נראה (focus-visible) – חובה לפי חוק נגישות */
+  :focus-visible {
+    outline: 2px solid hsl(var(--game-accent));
+    outline-offset: 2px;
+  }
+  button:focus-visible,
+  a:focus-visible,
+  [role="button"]:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid hsl(var(--game-accent));
+    outline-offset: 2px;
+  }
+
+  /* קישור דילוג לתוכן ראשי – נגישות מקלדת */
+  .skip-link {
+    position: absolute;
+    top: -100px;
+    right: 0;
+    padding: 0.75rem 1rem;
+    background: hsl(var(--game-accent));
+    color: hsl(var(--game-bg));
+    font-weight: 600;
+    z-index: 9999;
+    border-radius: 0 0 0 0.5rem;
+    transition: top 0.2s;
+  }
+  .skip-link:focus {
+    top: 0;
+    outline: 2px solid hsl(var(--game-text));
+    outline-offset: 2px;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    font-family: 'Heebo', sans-serif;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    direction: rtl;
+  }
+}
+
+@layer utilities {
+  /* Game-specific utility classes */
+  .bg-game-bg {
+    background-color: hsl(var(--game-bg));
+  }
+  
+  .bg-game-panel {
+    background-color: hsl(var(--game-panel));
+  }
+  
+  .bg-game-accent {
+    background-color: hsl(var(--game-accent));
+  }
+  
+  .text-game-text {
+    color: hsl(var(--game-text));
+  }
+  
+  .text-game-text-dim {
+    color: hsl(var(--game-text-dim));
+  }
+  
+  .text-game-accent {
+    color: hsl(var(--game-accent));
+  }
+  
+  .text-game-danger {
+    color: hsl(var(--game-danger));
+  }
+  
+  .text-game-warning {
+    color: hsl(var(--game-warning));
+  }
+  
+  .border-game-accent {
+    border-color: hsl(var(--game-accent));
+  }
+  
+  .bg-game-danger {
+    background-color: hsl(var(--game-danger));
+  }
+  
+  .bg-game-warning {
+    background-color: hsl(var(--game-warning));
+  }
+  
+  /* Glow effects */
+  .glow-cyan {
+    box-shadow: 0 0 20px hsl(var(--game-accent-glow));
+  }
+  
+  .text-glow-cyan {
+    text-shadow: 0 0 20px hsl(var(--game-accent-glow));
+  }
+}
+
+/* Leaflet map – battery and radar markers use SVG icons (no default shadow) */
+.leaflet-marker-icon.battery-marker-icon,
+.leaflet-marker-icon.radar-marker-icon {
+  background: none !important;
+  border: none !important;
+}
+.leaflet-marker-shadow {
+  display: none;
+}

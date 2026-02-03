@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2">
+  <!-- Naval radar - dish pointing sea (left), teal -->
+  <rect x="26" y="40" width="12" height="20" fill="hsl(190,30%,22%)"/>
+  <ellipse cx="32" cy="26" rx="22" ry="12" fill="hsl(190,60%,38%)"/>
+  <circle cx="32" cy="26" r="8" fill="hsl(190,80%,52%)"/>
+  <line x1="4" y1="26" x2="16" y2="18" stroke="hsl(190,80%,50%)" stroke-width="2"/>
+  <line x1="60" y1="26" x2="48" y2="18" stroke="hsl(190,80%,50%)" stroke-width="2"/>
+  <circle cx="16" cy="18" r="3" fill="hsl(190,90%,58%)"/>
+  <circle cx="48" cy="18" r="3" fill="hsl(190,90%,58%)"/>
+  <rect x="30" y="58" width="4" height="4" fill="hsl(190,20%,18%)"/>
+</svg>

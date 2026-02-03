@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2">
+  <!-- Arrow 2 - vertical launcher, violet tint -->
+  <rect x="20" y="48" width="24" height="12" rx="2" fill="hsl(260,30%,22%)"/>
+  <rect x="24" y="8" width="16" height="44" rx="2" fill="hsl(260,45%,38%)"/>
+  <rect x="26" y="12" width="12" height="36" rx="1" fill="hsl(260,55%,48%)"/>
+  <path d="M32 8 L36 4 L40 8 L36 12 Z" fill="hsl(260,65%,58%)"/>
+  <rect x="22" y="52" width="20" height="4" rx="1" fill="hsl(260,25%,16%)"/>
+</svg>
