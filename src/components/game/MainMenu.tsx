@@ -33,7 +33,7 @@ export function MainMenu({ highScore, onStartGame, hasSavedGame, onContinueGame,
   const difficulty = usePlayerStore((s) => s.difficulty ?? 'normal');
   const setDifficulty = usePlayerStore((s) => s.setDifficulty);
   return (
-    <div className="absolute inset-0 flex items-center justify-center z-30 p-4 overflow-y-auto" dir="rtl">
+    <div className="absolute inset-0 flex items-center justify-center z-30 p-4 overflow-y-auto safe-area-padding" dir="rtl" style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))', paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
       <motion.div
         initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -77,7 +77,7 @@ export function MainMenu({ highScore, onStartGame, hasSavedGame, onContinueGame,
               <Button
                 onClick={onContinueGame}
                 size="default"
-                className="w-full bg-amber-500 hover:bg-amber-600 text-game-panel font-bold h-10 text-base"
+                className="touch-target w-full bg-amber-500 hover:bg-amber-600 text-game-panel font-bold min-h-[44px] text-base"
               >
                 <Play className="h-4 w-4 ml-1.5" />
                 המשך משחק
@@ -101,19 +101,19 @@ export function MainMenu({ highScore, onStartGame, hasSavedGame, onContinueGame,
             <Button
               onClick={onStartGame}
               size="default"
-              className="w-full bg-game-accent hover:bg-game-accent/85 text-game-panel font-bold h-10 text-base"
+              className="touch-target w-full bg-game-accent hover:bg-game-accent/85 text-game-panel font-bold min-h-[44px] text-base"
             >
               <Play className="h-4 w-4 ml-1.5" />
               {hasSavedGame ? 'משחק חדש' : 'משחק גלים'}
             </Button>
 
             {onStartStory && (
-              <Button
-                variant="outline"
-                size="default"
-                className="w-full border-game-accent/40 text-game-accent hover:bg-game-accent/10 h-9 text-sm"
-                onClick={onStartStory}
-              >
+<Button
+              variant="outline"
+              size="default"
+              className="touch-target w-full border-game-accent/40 text-game-accent hover:bg-game-accent/10 min-h-[44px] text-sm"
+              onClick={onStartStory}
+            >
                 <BookOpen className="h-4 w-4 ml-1.5" />
                 מצב סיפור
               </Button>
@@ -123,7 +123,7 @@ export function MainMenu({ highScore, onStartGame, hasSavedGame, onContinueGame,
               <Button
                 variant="outline"
                 size="default"
-                className="w-full border-game-accent/40 text-game-accent hover:bg-game-accent/10 h-9 text-sm"
+                className="touch-target w-full border-game-accent/40 text-game-accent hover:bg-game-accent/10 min-h-[44px] text-sm"
                 onClick={onOpenShop}
               >
                 <ShoppingBag className="h-4 w-4 ml-1.5" />
@@ -136,7 +136,7 @@ export function MainMenu({ highScore, onStartGame, hasSavedGame, onContinueGame,
                 <Button
                   variant="outline"
                   size="sm"
-                  className="border-game-accent/40 text-game-accent hover:bg-game-accent/10 h-9 text-sm"
+                  className="touch-target border-game-accent/40 text-game-accent hover:bg-game-accent/10 min-h-[44px] text-sm"
                   onClick={onHowToPlay}
                 >
                   <Info className="h-3.5 w-3.5 ml-1" />
@@ -147,7 +147,7 @@ export function MainMenu({ highScore, onStartGame, hasSavedGame, onContinueGame,
                 <Button
                   variant="outline"
                   size="sm"
-                  className="border-game-accent/40 text-game-accent hover:bg-game-accent/10 h-9 text-sm"
+                  className="touch-target border-game-accent/40 text-game-accent hover:bg-game-accent/10 min-h-[44px] text-sm"
                   onClick={onOpenStats}
                 >
                   <BarChart3 className="h-3.5 w-3.5 ml-1" />
@@ -158,7 +158,7 @@ export function MainMenu({ highScore, onStartGame, hasSavedGame, onContinueGame,
                 <Button
                   variant="outline"
                   size="sm"
-                  className="border-game-accent/40 text-game-accent hover:bg-game-accent/10 h-9 text-sm"
+                  className="touch-target border-game-accent/40 text-game-accent hover:bg-game-accent/10 min-h-[44px] text-sm"
                   onClick={onOpenChallenges}
                 >
                   <Trophy className="h-3.5 w-3.5 ml-1" />
@@ -169,7 +169,7 @@ export function MainMenu({ highScore, onStartGame, hasSavedGame, onContinueGame,
                 <Button
                   variant="outline"
                   size="sm"
-                  className="border-amber-500/50 text-amber-300 hover:bg-amber-500/10 h-9 text-sm relative"
+                  className="touch-target border-amber-500/50 text-amber-300 hover:bg-amber-500/10 min-h-[44px] text-sm relative"
                   onClick={onOpenDailyReward}
                 >
                   <Gift className="h-3.5 w-3.5 ml-1" />
@@ -183,7 +183,7 @@ export function MainMenu({ highScore, onStartGame, hasSavedGame, onContinueGame,
                 <Button
                   variant="outline"
                   size="sm"
-                  className="col-span-2 border-game-accent/40 text-game-accent hover:bg-game-accent/10 h-9 text-sm"
+                  className="touch-target col-span-2 border-game-accent/40 text-game-accent hover:bg-game-accent/10 min-h-[44px] text-sm"
                   onClick={onOpenSettings}
                 >
                   <Settings className="h-3.5 w-3.5 ml-1" />
@@ -213,7 +213,7 @@ export function MainMenu({ highScore, onStartGame, hasSavedGame, onContinueGame,
                 <Button
                   variant="outline"
                   size="default"
-                  className="w-full border-game-accent/40 text-game-accent hover:bg-game-accent/10 h-9 text-sm mt-0.5"
+                  className="touch-target w-full border-game-accent/40 text-game-accent hover:bg-game-accent/10 min-h-[44px] text-sm mt-0.5"
                   onClick={onOpenAuth}
                 >
                   <LogIn className="h-4 w-4 ml-1.5" />

@@ -11,7 +11,7 @@ const Index = () => {
   }, []);
 
   return (
-    <div id="main-content" role="main" className="min-h-screen bg-game-bg overflow-hidden" dir="rtl" aria-label="תוכן ראשי – משחק מגן השמיים">
+    <div id="main-content" role="main" className="min-h-screen min-h-[100dvh] bg-game-bg overflow-hidden" dir="rtl" aria-label="תוכן ראשי – משחק מגן השמיים">
       <GameWithLeaflet />
     </div>
   );

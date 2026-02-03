@@ -39,7 +39,7 @@ function HUDInner({ budget, diamonds = 0, wave, score, morale, isEndless, notifi
   return (
     <div className="absolute inset-0 pointer-events-none z-10" dir="rtl">
       {/* Left: Morale – responsive: avoid overlap on small screens */}
-      <div className="absolute top-4 left-4 sm:left-20 md:left-40 lg:left-80 flex items-center gap-2 sm:gap-3 bg-game-panel/90 backdrop-blur-sm rounded-lg px-3 py-2 sm:px-4 border border-game-accent/30 min-w-[120px] sm:min-w-[180px] shadow-lg shadow-black/20">
+      <div className="hud-morale absolute top-4 left-4 sm:left-20 md:left-40 lg:left-80 flex items-center gap-2 sm:gap-3 bg-game-panel/90 backdrop-blur-sm rounded-lg px-3 py-2 sm:px-4 border border-game-accent/30 min-w-[100px] sm:min-w-[180px] shadow-lg shadow-black/20">
         <span className="text-game-text-dim text-sm">{t('morale')}</span>
         <div className="flex-1 min-w-0">
           <motion.div
@@ -74,7 +74,7 @@ function HUDInner({ budget, diamonds = 0, wave, score, morale, isEndless, notifi
       </div>
 
       {/* Center: Budget + Ammo + Wave (+ full coverage badge) – responsive flex-wrap */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 flex flex-wrap items-center justify-center gap-2 sm:gap-3 max-w-[95vw] pointer-events-none">
+      <div className="hud-center absolute top-4 left-1/2 -translate-x-1/2 flex flex-wrap items-center justify-center gap-2 sm:gap-3 max-w-[95vw] pointer-events-none">
         {fullCoverageRemaining > 0 && (
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -105,28 +105,28 @@ function HUDInner({ budget, diamonds = 0, wave, score, morale, isEndless, notifi
           <span className="text-amber-300 font-bold text-lg">◆</span>
           <span className="text-game-text font-mono text-lg">{diamonds}</span>
         </div>
-        <div className="flex flex-col gap-1.5 bg-game-panel/90 backdrop-blur-sm rounded-lg px-3 py-2 border border-game-accent/30 pointer-events-auto shadow-lg shadow-black/20" dir="rtl">
+        <div className="hud-ammo-panel flex flex-col gap-1.5 bg-game-panel/90 backdrop-blur-sm rounded-lg px-3 py-2 border border-game-accent/30 pointer-events-auto shadow-lg shadow-black/20" dir="rtl">
           <span className="text-game-text-dim text-xs font-medium">מלאי טילים</span>
           <div className="flex flex-col gap-1.5 text-sm">
             <div className="flex items-center justify-between gap-2">
               <span className="text-game-accent shrink-0">כיפת ברזל <span className="text-game-text-dim text-xs">₪{costIron}</span></span>
               <span className="font-mono text-game-text">{ammoIronDome}</span>
               {onBuyAmmo && (
-                <button type="button" onClick={() => onBuyAmmo('shortRange')} disabled={budget < costIron} className="text-xs px-2 py-0.5 rounded bg-game-accent/20 text-game-accent hover:bg-game-accent/30 active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed">קנה</button>
+                <button type="button" onClick={() => onBuyAmmo('shortRange')} disabled={budget < costIron} className="touch-target text-xs px-3 py-2 min-h-[44px] rounded bg-game-accent/20 text-game-accent hover:bg-game-accent/30 active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed">קנה</button>
               )}
             </div>
             <div className="flex items-center justify-between gap-2">
               <span className="text-orange-400 shrink-0">פטריוט <span className="text-game-text-dim text-xs">₪{costPatriot}</span></span>
               <span className="font-mono text-game-text">{ammoPatriot}</span>
               {onBuyAmmo && (
-                <button type="button" onClick={() => onBuyAmmo('mediumRange')} disabled={budget < costPatriot} className="text-xs px-2 py-0.5 rounded bg-orange-500/20 text-orange-300 hover:bg-orange-500/30 active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed">קנה</button>
+                <button type="button" onClick={() => onBuyAmmo('mediumRange')} disabled={budget < costPatriot} className="touch-target text-xs px-3 py-2 min-h-[44px] rounded bg-orange-500/20 text-orange-300 hover:bg-orange-500/30 active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed">קנה</button>
               )}
             </div>
             <div className="flex items-center justify-between gap-2">
               <span className="text-purple-400 shrink-0">חץ 3 <span className="text-game-text-dim text-xs">₪{costArrow}</span></span>
               <span className="font-mono text-game-text">{ammoArrow3}</span>
               {onBuyAmmo && (
-                <button type="button" onClick={() => onBuyAmmo('longRange')} disabled={budget < costArrow} className="text-xs px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed">קנה</button>
+                <button type="button" onClick={() => onBuyAmmo('longRange')} disabled={budget < costArrow} className="touch-target text-xs px-3 py-2 min-h-[44px] rounded bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed">קנה</button>
               )}
             </div>
           </div>

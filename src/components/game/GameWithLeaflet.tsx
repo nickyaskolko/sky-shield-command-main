@@ -992,7 +992,7 @@ export function GameWithLeaflet() {
   };
   
   return (
-    <div className="relative w-full h-screen min-h-[320px] overflow-hidden" dir="rtl">
+    <div className="game-viewport relative w-full min-h-[320px] overflow-hidden" dir="rtl">
       {/* Fixed aspect ratio: full Israel Metula to Eilat – centered in viewport */}
       <div className="absolute inset-0 flex items-center justify-center bg-game-panel/30">
         <div

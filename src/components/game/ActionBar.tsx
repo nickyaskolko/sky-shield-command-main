@@ -58,7 +58,7 @@ export function ActionBar({
   const isPlacing = placingBatteryType || placingRadarType;
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 p-2 sm:p-4 pb-2 sm:pb-4 pointer-events-none z-30" dir="rtl">
+    <div className="absolute bottom-0 left-0 right-0 p-2 sm:p-4 pb-2 sm:pb-4 pointer-events-none z-30 safe-area-bottom" dir="rtl" style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}>
       <div className="flex justify-center items-center gap-2 sm:gap-3 max-w-4xl mx-auto flex-wrap">
         {isPlacing ? (
           <motion.div
@@ -74,7 +74,7 @@ export function ActionBar({
               variant="destructive"
               size="sm"
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); onCancel(); }}
-              className="bg-game-danger hover:bg-game-danger/80 pointer-events-auto"
+              className="touch-target min-h-[44px] bg-game-danger hover:bg-game-danger/80 pointer-events-auto"
             >
               <X className="h-4 w-4 ml-1" />
               {t('cancel')}
@@ -92,7 +92,7 @@ export function ActionBar({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="border-game-accent/40 text-game-accent hover:bg-game-accent/10 hover:border-game-accent/60 gap-1.5"
+                  className="touch-target min-h-[44px] min-w-[44px] border-game-accent/40 text-game-accent hover:bg-game-accent/10 hover:border-game-accent/60 gap-1.5"
                 >
                   <Target className="h-4 w-4" />
                   <span className="text-xs font-medium">סוללות</span>
@@ -131,7 +131,7 @@ export function ActionBar({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="border-amber-500/40 text-amber-300 hover:bg-amber-500/10 hover:border-amber-500/60 gap-1.5"
+                  className="touch-target min-h-[44px] min-w-[44px] border-amber-500/40 text-amber-300 hover:bg-amber-500/10 hover:border-amber-500/60 gap-1.5"
                 >
                   <Radar className="h-4 w-4" />
                   <span className="text-xs font-medium">רדארים</span>

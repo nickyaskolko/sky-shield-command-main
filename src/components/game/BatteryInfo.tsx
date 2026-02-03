@@ -78,7 +78,7 @@ export function BatteryInfo({ battery, budget, ammoPool, onReload, onClose }: Ba
         </div>
         <button 
           onClick={onClose}
-          className="p-1 hover:bg-game-accent/20 active:scale-95 rounded-lg transition-all duration-200"
+          className="touch-target min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-game-accent/20 active:scale-95 rounded-lg transition-all duration-200"
         >
           <X className="h-4 w-4 text-game-text-dim" />
         </button>

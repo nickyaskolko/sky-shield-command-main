@@ -11,6 +11,11 @@
 
 @layer base {
   :root {
+    /* Safe area for notched devices (iPhone, iPad) */
+    --sat: env(safe-area-inset-top, 0px);
+    --sar: env(safe-area-inset-right, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
     /* Base colors - Light mode (fallback) */
     --background: 220 30% 8%;
     --foreground: 185 50% 90%;
@@ -268,4 +273,49 @@
 }
 .leaflet-marker-shadow {
   display: none;
+}
+
+/* ========== Responsive & Touch – מובייל ואייפד ========== */
+/* Touch target minimum 44px (Apple HIG / Material) */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+@media (pointer: fine) {
+  .touch-target {
+    min-height: 0;
+    min-width: 0;
+  }
+}
+
+/* Game viewport: safe area + full height on mobile */
+.game-viewport {
+  padding-top: var(--sat);
+  padding-right: var(--sar);
+  padding-bottom: var(--sab);
+  padding-left: var(--sal);
+  min-height: 100dvh;
+  min-height: 100vh;
+  touch-action: pan-x pan-y pinch-zoom;
+}
+
+/* HUD & Action bar: more compact on small screens */
+@media (max-width: 640px) {
+  .game-viewport .hud-morale { min-width: 100px; }
+  .game-viewport .hud-center { gap: 0.5rem; }
+  .game-viewport .hud-ammo-panel { max-height: 140px; overflow-y: auto; }
+}
+
+/* Leaflet: ensure touch works on map (pan/zoom) */
+.leaflet-container {
+  touch-action: none;
+}
+.leaflet-touch .leaflet-control-zoom {
+  border: 2px solid rgba(0,0,0,0.2);
+}
+.leaflet-touch .leaflet-control-zoom a {
+  width: 44px;
+  height: 44px;
+  line-height: 44px;
+  font-size: 22px;
 }
