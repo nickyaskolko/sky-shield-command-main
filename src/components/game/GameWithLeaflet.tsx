@@ -30,6 +30,8 @@ import { AchievementToast } from './AchievementToast';
 import { EventNotification } from './EventNotification';
 import { AlertsPanel } from './AlertsPanel';
 import { BuffsPanel } from './BuffsPanel';
+import { MultiplayerLobby } from './MultiplayerLobby';
+import { useMultiplayer } from '@/hooks/useMultiplayer';
 import { projectilePool } from '@/lib/game/objectPool';
 import { getThreatColor, getBatteryColor, getThreatName, NAVAL_SEA_ANGLE, NAVAL_SECTOR_HALF } from '@/lib/game/entities';
 import { applyScreenShake, drawLaserBeam } from '@/lib/game/renderer';
@@ -43,6 +45,7 @@ import { soundManager } from '@/lib/audio/SoundManager';
 import { supabase } from '@/lib/supabase';
 import { checkAchievements } from '@/lib/game/achievements';
 import { rollForEvent } from '@/lib/game/randomEvents';
+import { analytics } from '@/lib/analytics';
 import { ISRAEL_MAP_BOUNDS, ISRAEL_ASPECT_RATIO, CITIES_LATLNG, getInitialCitiesForMap, ISRAEL_BORDER_POLYGON, latLngToNormalized } from '@/lib/game/israelMap';
 import { LogOut, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -102,7 +105,7 @@ export function GameWithLeaflet() {
   const exitStoryToMenu = useGameStore(state => state.exitStoryToMenu);
   const storyChapterId = useGameStore(state => state.storyChapterId);
   const gameMode = useGameStore(state => state.gameMode);
-  const [menuScreen, setMenuScreen] = useState<'main' | 'storyList' | 'storyNarrative'>('main');
+  const [menuScreen, setMenuScreen] = useState<'main' | 'storyList' | 'storyNarrative' | 'multiplayer'>('main');
   const [storyMenuChapterId, setStoryMenuChapterId] = useState<string | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const { user, signOut } = useAuth();
@@ -111,6 +114,7 @@ export function GameWithLeaflet() {
     startGameRaw(getInitialCitiesForMap(getGameConfig().CANVAS_WIDTH, getGameConfig().CANVAS_HEIGHT));
   }, [startGameRaw]);
   const startStoryGame = useCallback((chapterId: string) => {
+    analytics.storyStart(chapterId);
     startStoryGameRaw(chapterId, getInitialCitiesForMap(getGameConfig().CANVAS_WIDTH, getGameConfig().CANVAS_HEIGHT));
     setMenuScreen('main');
     setStoryMenuChapterId(null);
@@ -134,7 +138,180 @@ export function GameWithLeaflet() {
   const openShop = useGameStore(state => state.openShop);
   const setPhase = useGameStore(state => state.setPhase);
   const update = useGameStore(state => state.update);
-  
+  const addNotification = useGameStore(state => state.addNotification);
+  const getSerializableStateSnapshot = useGameStore(state => state.getSerializableStateSnapshot);
+  const replaceStateFromHost = useGameStore(state => state.replaceStateFromHost);
+  const buyThaadAmmo = useGameStore(state => state.buyThaadAmmo);
+  const purchaseThaadUpgrade = useGameStore(state => state.purchaseThaadUpgrade);
+
+  const multiplayer = useMultiplayer();
+  const { role: multiplayerRole, isGuestConnected, sendState, sendAction, onStateUpdate, onGuestAction, onHostLeft } = multiplayer;
+  const multiplayerRoleRef = useRef(multiplayerRole);
+  multiplayerRoleRef.current = multiplayerRole;
+  const menuScreenRef = useRef(menuScreen);
+  menuScreenRef.current = menuScreen;
+
+  // Guest: apply state from host; leave lobby only when game starts; preserve guest placement mode so it isn't overwritten every tick
+  useEffect(() => {
+    if (multiplayerRole !== 'guest') return;
+    const unsub = onStateUpdate((snapshot) => {
+      const prev = useGameStore.getState();
+      const guestPlacingBattery = prev.placingBatteryType;
+      const guestPlacingRadar = prev.placingRadarType;
+      replaceStateFromHost(snapshot);
+      if (snapshot.phase !== 'menu' && menuScreenRef.current === 'multiplayer') setMenuScreen('main');
+      if (guestPlacingBattery || guestPlacingRadar) {
+        useGameStore.setState({ placingBatteryType: guestPlacingBattery ?? null, placingRadarType: guestPlacingRadar ?? null });
+      }
+    });
+    return unsub;
+  }, [multiplayerRole, onStateUpdate, replaceStateFromHost]);
+
+  // Host: apply guest actions
+  useEffect(() => {
+    if (multiplayerRole !== 'host') return;
+    const unsub = onGuestAction((action) => {
+      const store = useGameStore.getState();
+      switch (action.type) {
+        case 'placeBattery':
+          store.startPlacingBattery(action.batteryType as import('@/lib/game/entities').BatteryType);
+          store.placeBattery(action.x, action.y);
+          break;
+        case 'placeRadar':
+          store.startPlacingRadar(action.radarType as import('@/lib/game/entities').RadarType);
+          store.placeRadar(action.x, action.y);
+          break;
+        case 'cancelPlacement':
+          store.cancelPlacement();
+          break;
+        case 'nextWave':
+          store.nextWave();
+          break;
+        case 'startWaveFromPreparation':
+          store.startWaveFromPreparation();
+          break;
+        case 'openShop':
+          store.openShop();
+          break;
+        case 'setPhase':
+          store.setPhase(action.phase as import('@/lib/game/entities').GamePhase);
+          break;
+        case 'selectBattery':
+          store.selectBattery(action.id);
+          break;
+        case 'reloadBattery':
+          store.reloadBattery();
+          break;
+        case 'buyAmmo':
+          store.buyAmmo(action.ammoType, action.amount);
+          break;
+        case 'buyThaadAmmo':
+          store.buyThaadAmmo();
+          break;
+        case 'purchaseUpgrade':
+          store.purchaseUpgrade(action.upgradeType, action.payWithDiamonds);
+          break;
+        case 'unlockLaser':
+          store.unlockLaser(action.payWithDiamonds);
+          break;
+        case 'purchaseMoraleBoost':
+          store.purchaseMoraleBoost();
+          break;
+        case 'buyBudgetWithDiamonds':
+          store.buyBudgetWithDiamonds(action.diamondAmount);
+          break;
+        case 'purchaseThaadUpgrade':
+          store.purchaseThaadUpgrade();
+          break;
+        default:
+          break;
+      }
+    });
+    return unsub;
+  }, [multiplayerRole, onGuestAction]);
+
+  // Host left: guest returns to menu
+  useEffect(() => {
+    if (multiplayerRole !== 'guest') return;
+    const unsub = onHostLeft(() => {
+      multiplayer.leaveRoom();
+      setPhase('menu');
+      setMenuScreen('main');
+      addNotification('המארח התנתק', 'warning');
+    });
+    return unsub;
+  }, [multiplayerRole, onHostLeft, setPhase, addNotification, multiplayer]);
+
+  // Host: broadcast state to guest (throttled)
+  useEffect(() => {
+    if (multiplayerRole !== 'host' || !isGuestConnected) return;
+    const interval = setInterval(() => {
+      const state = useGameStore.getState();
+      if (state.phase === 'playing' || state.phase === 'preparation' || state.phase === 'waveComplete' || state.phase === 'shop' || state.phase === 'gameOver') {
+        sendState(state.getSerializableStateSnapshot());
+      }
+    }, 80);
+    return () => clearInterval(interval);
+  }, [multiplayerRole, isGuestConnected, sendState]);
+
+  // Guest: wrap store actions to send over Realtime instead of applying locally
+  const wrappedCancelPlacement = useCallback(() => {
+    if (multiplayerRole === 'guest') sendAction({ type: 'cancelPlacement' });
+    else cancelPlacement();
+  }, [multiplayerRole, sendAction, cancelPlacement]);
+  const wrappedNextWave = useCallback(() => {
+    if (multiplayerRole === 'guest') sendAction({ type: 'nextWave' });
+    else nextWave();
+  }, [multiplayerRole, sendAction, nextWave]);
+  const wrappedStartWaveFromPreparation = useCallback(() => {
+    if (multiplayerRole === 'guest') sendAction({ type: 'startWaveFromPreparation' });
+    else startWaveFromPreparation();
+  }, [multiplayerRole, sendAction, startWaveFromPreparation]);
+  const wrappedOpenShop = useCallback(() => {
+    if (multiplayerRole === 'guest') sendAction({ type: 'openShop' });
+    else openShop();
+  }, [multiplayerRole, sendAction, openShop]);
+  const wrappedSetPhase = useCallback((phase: import('@/lib/game/entities').GamePhase) => {
+    if (multiplayerRole === 'guest') sendAction({ type: 'setPhase', phase });
+    else setPhase(phase);
+  }, [multiplayerRole, sendAction, setPhase]);
+  const wrappedSelectBattery = useCallback((id: string | null) => {
+    if (multiplayerRole === 'guest') sendAction({ type: 'selectBattery', id });
+    else selectBattery(id);
+  }, [multiplayerRole, sendAction, selectBattery]);
+  const wrappedReloadBattery = useCallback(() => {
+    if (multiplayerRole === 'guest') sendAction({ type: 'reloadBattery' });
+    else reloadBattery();
+  }, [multiplayerRole, sendAction, reloadBattery]);
+  const wrappedBuyAmmo = useCallback((type: 'shortRange' | 'mediumRange' | 'longRange', amount?: number) => {
+    if (multiplayerRole === 'guest') sendAction({ type: 'buyAmmo', ammoType: type, amount });
+    else buyAmmo(type, amount);
+  }, [multiplayerRole, sendAction, buyAmmo]);
+  const wrappedPurchaseUpgrade = useCallback((upgradeType: 'reloadSpeed' | 'radarRange' | 'maxAmmo', payWithDiamonds?: boolean) => {
+    if (multiplayerRole === 'guest') sendAction({ type: 'purchaseUpgrade', upgradeType, payWithDiamonds });
+    else purchaseUpgrade(upgradeType, payWithDiamonds);
+  }, [multiplayerRole, sendAction, purchaseUpgrade]);
+  const wrappedUnlockLaser = useCallback((payWithDiamonds?: boolean) => {
+    if (multiplayerRole === 'guest') sendAction({ type: 'unlockLaser', payWithDiamonds });
+    else unlockLaser(payWithDiamonds);
+  }, [multiplayerRole, sendAction, unlockLaser]);
+  const wrappedPurchaseMoraleBoost = useCallback(() => {
+    if (multiplayerRole === 'guest') sendAction({ type: 'purchaseMoraleBoost' });
+    else purchaseMoraleBoost();
+  }, [multiplayerRole, sendAction, purchaseMoraleBoost]);
+  const wrappedBuyBudgetWithDiamonds = useCallback((diamondAmount: number) => {
+    if (multiplayerRole === 'guest') sendAction({ type: 'buyBudgetWithDiamonds', diamondAmount });
+    else buyBudgetWithDiamonds(diamondAmount);
+  }, [multiplayerRole, sendAction, buyBudgetWithDiamonds]);
+  const wrappedBuyThaadAmmo = useCallback(() => {
+    if (multiplayerRole === 'guest') sendAction({ type: 'buyThaadAmmo' });
+    else buyThaadAmmo();
+  }, [multiplayerRole, sendAction, buyThaadAmmo]);
+  const wrappedPurchaseThaadUpgrade = useCallback(() => {
+    if (multiplayerRole === 'guest') sendAction({ type: 'purchaseThaadUpgrade' });
+    else purchaseThaadUpgrade();
+  }, [multiplayerRole, sendAction, purchaseThaadUpgrade]);
+
   // Player profile store
   const playerAchievements = usePlayerStore(state => state.achievements);
   const unlockAchievement = usePlayerStore(state => state.unlockAchievement);
@@ -182,16 +359,16 @@ export function GameWithLeaflet() {
   
   const sounds = useSoundManager();
   
-  // Preparation phase: countdown and auto-start when 0
+  // Preparation phase: countdown (host + guest) and auto-start when 0 (host only)
   useEffect(() => {
     if (phase !== 'preparation' || preparationStartedAt == null) return;
     const tick = () => {
       const elapsed = Date.now() - preparationStartedAt;
       const remaining = Math.max(0, Math.ceil((PREPARATION_DURATION_MS - elapsed) / 1000));
       setPreparationRemaining(remaining);
-      if (remaining <= 0) {
+      if (remaining <= 0 && multiplayerRoleRef.current !== 'guest') {
         try {
-          startWaveFromPreparation();
+          wrappedStartWaveFromPreparation();
           soundManager.play('waveComplete');
         } catch {
           // Defensive: avoid unhandled error breaking interval
@@ -201,7 +378,7 @@ export function GameWithLeaflet() {
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [phase, preparationStartedAt, startWaveFromPreparation]);
+  }, [phase, preparationStartedAt, wrappedStartWaveFromPreparation]);
   const selectedBattery = batteries.find(b => b.id === selectedBatteryId) || null;
   const prevInterceptionsRef = useRef(stats.totalInterceptions);
   const prevCityHitLogLenRef = useRef(cityHitLog.length);
@@ -354,10 +531,20 @@ export function GameWithLeaflet() {
     
     mapRef.current = map;
     
+    // On mobile the container can have 0 size at init – force Leaflet to recalc after layout
+    const onResize = () => { try { map.invalidateSize(); } catch { /* ignore */ } };
+    requestAnimationFrame(() => onResize());
+    const t1 = setTimeout(onResize, 100);
+    const t2 = setTimeout(onResize, 500);
+    window.addEventListener('resize', onResize);
+    
     // Set canvas dimensions
     useGameStore.getState().setCanvasDimensions(getGameConfig().CANVAS_WIDTH, getGameConfig().CANVAS_HEIGHT);
     
     return () => {
+      window.removeEventListener('resize', onResize);
+      clearTimeout(t1);
+      clearTimeout(t2);
       // כבה zoom מגלילה לפני הסרה – מונע _leaflet_pos כשהמפה כבר הוסרה מהדום
       try {
         if ((map as L.Map & { scrollWheelZoom?: { disable?: () => void } }).scrollWheelZoom?.disable) {
@@ -420,9 +607,45 @@ export function GameWithLeaflet() {
         highestScore: Math.max(playerStats.highestScore, score),
         highestCombo: Math.max(playerStats.highestCombo, combo.max),
       });
-      
     }
   }, [phase]);
+
+  // Analytics: send once per phase transition
+  const lastAnalyticsPhaseRef = useRef<string | null>(null);
+  const gameSessionStartRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (phase === 'preparation' || phase === 'playing') {
+      if (gameSessionStartRef.current === null) gameSessionStartRef.current = Date.now();
+    } else if (phase === 'menu') {
+      gameSessionStartRef.current = null;
+    }
+  }, [phase]);
+  useEffect(() => {
+    if (phase === 'waveComplete' && lastAnalyticsPhaseRef.current !== 'waveComplete') {
+      lastAnalyticsPhaseRef.current = 'waveComplete';
+      const perfect = waveDamageCount === 0;
+      analytics.waveComplete(wave, score, perfect, combo.max);
+    }
+    if (phase === 'gameOver' && lastAnalyticsPhaseRef.current !== 'gameOver') {
+      lastAnalyticsPhaseRef.current = 'gameOver';
+      const timePlayedSeconds = gameSessionStartRef.current != null
+        ? Math.round((Date.now() - gameSessionStartRef.current) / 1000)
+        : 0;
+      analytics.gameOver(score, stats.totalWavesCompleted, wave, timePlayedSeconds);
+      gameSessionStartRef.current = null;
+    }
+    if (phase === 'shop' && lastAnalyticsPhaseRef.current !== 'shop') {
+      lastAnalyticsPhaseRef.current = 'shop';
+      analytics.shopOpen();
+    }
+    if (phase === 'storyChapterComplete' && storyChapterId && lastAnalyticsPhaseRef.current !== 'storyChapterComplete') {
+      lastAnalyticsPhaseRef.current = 'storyChapterComplete';
+      analytics.storyChapterComplete(storyChapterId, wave);
+    }
+    if (phase === 'menu' || phase === 'playing' || phase === 'preparation') {
+      lastAnalyticsPhaseRef.current = null;
+    }
+  }, [phase, wave, score, waveDamageCount, combo.max, stats.totalWavesCompleted, storyChapterId]);
   
   // Roll for random event at wave start – effect (e.g. radar +30%) applied in gameStore until duration expires
   useEffect(() => {
@@ -525,10 +748,10 @@ export function GameWithLeaflet() {
         markersRef.current.batteries.push(ring);
       }
 
-      batteryMarker.on('click', () => selectBattery(battery.id));
+      batteryMarker.on('click', () => wrappedSelectBattery(battery.id));
       markersRef.current.batteries.push(rangeCircle as L.Layer, batteryMarker);
     });
-  }, [batteries, selectedBatteryId, selectBattery, ammoPool]);
+  }, [batteries, selectedBatteryId, wrappedSelectBattery, ammoPool]);
   
   // Icon paths for radar types – כל סוג רדאר עם אייקון משלו
   const RADAR_ICONS: Record<string, string> = {
@@ -657,6 +880,16 @@ export function GameWithLeaflet() {
       const x = ((lng - MAP_CONFIG.bounds.west) / (MAP_CONFIG.bounds.east - MAP_CONFIG.bounds.west)) * getGameConfig().CANVAS_WIDTH;
       const y = ((MAP_CONFIG.bounds.north - lat) / (MAP_CONFIG.bounds.north - MAP_CONFIG.bounds.south)) * getGameConfig().CANVAS_HEIGHT;
       
+      if (multiplayerRole === 'guest') {
+        if (state.placingBatteryType) {
+          sendAction({ type: 'placeBattery', batteryType: state.placingBatteryType, x, y });
+          sounds.playBuildSound();
+        } else if (state.placingRadarType) {
+          sendAction({ type: 'placeRadar', radarType: state.placingRadarType, x, y });
+          sounds.playBuildSound();
+        }
+        return;
+      }
       if (state.placingBatteryType) {
         placeBattery(x, y);
         sounds.playBuildSound();
@@ -670,7 +903,7 @@ export function GameWithLeaflet() {
     return () => {
       map.off('click', handleClick);
     };
-  }, [placeBattery, placeRadar, sounds]);
+  }, [placeBattery, placeRadar, sounds, multiplayerRole, sendAction]);
   
   // Game loop and canvas rendering
   useEffect(() => {
@@ -708,8 +941,8 @@ export function GameWithLeaflet() {
       
       const state = useGameStore.getState();
       
-      // Update game logic
-      if (state.phase === 'playing') {
+      // Update game logic (only host runs simulation; guest receives state via Realtime)
+      if (state.phase === 'playing' && multiplayerRoleRef.current !== 'guest') {
         update(deltaTime, currentTime);
       }
       
@@ -992,14 +1225,14 @@ export function GameWithLeaflet() {
   };
   
   return (
-    <div className="game-viewport relative w-full min-h-[320px] overflow-hidden" dir="rtl">
-      {/* Fixed aspect ratio: full Israel Metula to Eilat – centered in viewport */}
-      <div className="absolute inset-0 flex items-center justify-center bg-game-panel/30">
+    <div className="game-viewport relative w-full min-h-[280px] h-full overflow-hidden flex flex-col" dir="rtl">
+      {/* Fixed aspect ratio: full Israel Metula to Eilat – centered in viewport; min-height so map never gets 0 on mobile */}
+      <div className="absolute inset-0 flex items-center justify-center bg-game-panel/30 min-h-[200px]">
         <div
-          className="max-w-full max-h-full w-full h-full min-h-0 relative"
+          className="max-w-full max-h-full w-full h-full min-h-[200px] min-w-0 relative"
           style={{ aspectRatio: ISRAEL_ASPECT_RATIO }}
         >
-          <div ref={mapContainerRef} className="absolute inset-0 z-0" style={{ background: 'hsl(195, 45%, 82%)' }} />
+          <div ref={mapContainerRef} className="absolute inset-0 z-0 min-h-[180px]" style={{ background: 'hsl(195, 45%, 82%)' }} />
           <canvas
             ref={canvasRef}
             className="absolute inset-0 z-10 pointer-events-none w-full h-full"
@@ -1021,13 +1254,33 @@ export function GameWithLeaflet() {
           onBack={() => { setMenuScreen('storyList'); setStoryMenuChapterId(null); }}
         />
       )}
+      {phase === 'menu' && menuScreen === 'multiplayer' && (
+        <MultiplayerLobby
+          multiplayer={multiplayer}
+          onBack={() => setMenuScreen('main')}
+          onStartGame={() => {
+            analytics.gameStart('waves', false);
+            startGame();
+            setMenuScreen('main');
+          }}
+        />
+      )}
       {phase === 'menu' && menuScreen === 'main' && (
         <MainMenu 
           highScore={stats.highScore}
-          onStartGame={startGame}
+          onStartGame={() => {
+            const hasSaved = typeof localStorage !== 'undefined' && !!localStorage.getItem('sky_shield_saved_game');
+            analytics.gameStart('waves', hasSaved);
+            startGame();
+          }}
           hasSavedGame={typeof localStorage !== 'undefined' && !!localStorage.getItem('sky_shield_saved_game')}
-          onContinueGame={() => useGameStore.getState().resumeGame()}
+          onContinueGame={() => {
+            const ok = useGameStore.getState().resumeGame();
+            if (ok) analytics.savedGameContinue();
+            else analytics.resumeFail();
+          }}
           onStartStory={() => setMenuScreen('storyList')}
+          onOpenMultiplayer={() => setMenuScreen('multiplayer')}
           onHowToPlay={() => setShowTutorialFromMenu(true)}
           onOpenSettings={() => setShowSettings(true)}
           onOpenStats={() => setShowStats(true)}
@@ -1060,39 +1313,39 @@ export function GameWithLeaflet() {
         }}
       />
       
-      {/* Exit & Save + Settings + Heat map (in-game) – responsive */}
+      {/* Exit & Save + Settings + Heat map – compact on mobile */}
       {phase !== 'menu' && (
-        <div className="absolute top-2 sm:top-4 left-2 sm:left-4 z-20 flex items-center gap-1.5 sm:gap-2 pointer-events-auto">
+        <div className="absolute top-1 sm:top-4 left-1 sm:left-4 z-20 flex items-center gap-1 sm:gap-2 pointer-events-auto">
           {(phase === 'playing' || phase === 'preparation') && (
             <button
               type="button"
               onClick={() => setShowHeatMap(v => !v)}
-              className={showHeatMap ? 'p-2 rounded-lg bg-amber-600/80 border border-amber-400 text-white transition-all duration-200 active:scale-95' : 'p-2 rounded-lg bg-game-panel/90 border border-game-accent/30 text-game-accent hover:bg-game-accent/20 active:scale-95 transition-all duration-200'}
+              className={showHeatMap ? 'p-1.5 sm:p-2 rounded-md sm:rounded-lg bg-amber-600/80 border border-amber-400 text-white text-[10px] sm:text-sm transition-all duration-200 active:scale-95' : 'p-1.5 sm:p-2 rounded-md sm:rounded-lg bg-game-panel/90 border border-game-accent/30 text-game-accent hover:bg-game-accent/20 active:scale-95 transition-all duration-200 text-[10px] sm:text-sm'}
               aria-label="מפת חום"
-              title="מפת חום – אזורים שנפגעו"
+              title="מפת חום"
             >
-              מפת חום
+              חום
             </button>
           )}
           {(phase === 'playing' || phase === 'preparation') && (
             <button
               type="button"
               onClick={() => useGameStore.getState().saveGameAndExit()}
-              className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg bg-game-panel/90 border border-amber-500/40 text-amber-300 hover:bg-amber-500/20 active:scale-95 transition-all duration-200 text-sm"
+              className="flex items-center gap-1 px-2 py-1.5 sm:px-2.5 sm:py-2 rounded-md sm:rounded-lg bg-game-panel/90 border border-amber-500/40 text-amber-300 hover:bg-amber-500/20 active:scale-95 transition-all duration-200 text-[10px] sm:text-sm min-h-[36px] sm:min-h-[40px]"
               aria-label="יציאה ושמירה"
               title="יציאה ושמירה"
             >
-              <LogOut className="h-4 w-4 shrink-0" />
+              <LogOut className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
               <span className="hidden sm:inline">יציאה ושמירה</span>
             </button>
           )}
           <button
             type="button"
             onClick={() => setShowSettings(true)}
-            className="p-2 rounded-lg bg-game-panel/90 border border-game-accent/30 text-game-accent hover:bg-game-accent/20 active:scale-95 transition-all duration-200"
+            className="p-1.5 sm:p-2 rounded-md sm:rounded-lg bg-game-panel/90 border border-game-accent/30 text-game-accent hover:bg-game-accent/20 active:scale-95 transition-all duration-200 min-h-[36px] sm:min-h-[40px] flex items-center justify-center"
             aria-label="הגדרות"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 sm:w-5 sm:h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
           </button>
         </div>
       )}
@@ -1115,7 +1368,7 @@ export function GameWithLeaflet() {
           notifications={notifications}
           combo={combo.current}
           ammoPool={ammoPool}
-          onBuyAmmo={buyAmmo}
+          onBuyAmmo={wrappedBuyAmmo}
           activeThreats={threats.length}
           fullCoverageRemaining={fullCoverageRemaining}
         />
@@ -1126,15 +1379,15 @@ export function GameWithLeaflet() {
       {/* Buffs from main menu shop – player chooses when to activate */}
       {phase === 'playing' && <BuffsPanel />}
       
-      {/* Preparation phase – compact panel in corner, responsive */}
+      {/* Preparation phase – compact on mobile */}
       {phase === 'preparation' && (
-        <div className="absolute top-4 left-2 sm:left-4 z-30 flex flex-col gap-2 p-3 sm:p-4 bg-game-panel/95 backdrop-blur-sm border border-game-accent/30 rounded-xl shadow-xl max-w-[calc(100vw-1rem)] sm:max-w-xs" dir="rtl">
-          <h2 className="text-lg font-bold text-game-accent">גל {wave} – שלב הכנה</h2>
-          <p className="text-game-text text-sm">
-            הצב רדארים וסוללות על המפה. כשמוכן – לחץ &quot;התחל התקפה&quot; או חכה לסיום הספירה.
+        <div className="absolute top-10 sm:top-4 left-1 right-1 sm:left-4 sm:right-auto z-30 flex flex-col gap-1.5 sm:gap-2 p-2 sm:p-4 bg-game-panel/95 backdrop-blur-sm border border-game-accent/30 rounded-lg sm:rounded-xl shadow-xl max-w-[calc(100vw-0.5rem)] sm:max-w-xs" dir="rtl">
+          <h2 className="text-sm sm:text-lg font-bold text-game-accent">גל {wave} – הכנה</h2>
+          <p className="text-game-text text-[10px] sm:text-sm">
+            הצב רדארים וסוללות. לחץ &quot;התחל&quot; או חכה לספירה.
           </p>
-          <p className="text-game-text-dim text-sm">
-            ההתקפה מתחילה בעוד <strong className="text-game-accent">{preparationRemaining}</strong> שניות
+          <p className="text-game-text-dim text-[10px] sm:text-sm">
+            בעוד <strong className="text-game-accent">{preparationRemaining}</strong> ש׳
           </p>
           {preparationRemaining >= 1 && preparationRemaining <= 20 && (() => {
             const waveConfig = (gameMode === 'story' && storyChapterId)
@@ -1143,27 +1396,22 @@ export function GameWithLeaflet() {
             const hint = getWaveHint(waveConfig);
             if (hint.threatLabels.length === 0 && hint.radarSuggestions.length === 0 && hint.batterySuggestions.length === 0) return null;
             return (
-              <div className="text-amber-200 text-sm space-y-1.5 animate-pulse">
-                <p className="font-medium">💡 בגל הזה יופיעו:</p>
-                <p className="text-amber-300/95">{hint.threatLabels.join(' · ')}</p>
-                {hint.radarSuggestions.length > 0 && (
-                  <p>רדאר מומלץ: {hint.radarSuggestions.join(', ')}</p>
-                )}
-                {hint.batterySuggestions.length > 0 && (
-                  <p>מערכות יירוט מומלצות: {hint.batterySuggestions.join(', ')}</p>
-                )}
+              <div className="text-amber-200 text-[10px] sm:text-sm space-y-1 animate-pulse">
+                <p className="font-medium">💡 {hint.threatLabels.join(' · ')}</p>
+                {hint.radarSuggestions.length > 0 && <p className="text-amber-300/95">רדאר: {hint.radarSuggestions.join(', ')}</p>}
+                {hint.batterySuggestions.length > 0 && <p className="text-amber-300/95">יירוט: {hint.batterySuggestions.join(', ')}</p>}
               </div>
             );
           })()}
           <Button
             size="sm"
-            className="bg-game-accent hover:bg-game-accent/80 text-game-panel font-bold w-full"
+            className="bg-game-accent hover:bg-game-accent/80 text-game-panel font-bold w-full min-h-[36px] sm:min-h-[40px] text-xs sm:text-sm"
             onClick={() => {
-              startWaveFromPreparation();
+              wrappedStartWaveFromPreparation();
               soundManager.play('waveComplete');
             }}
           >
-            <Play className="h-4 w-4 ml-2" />
+            <Play className="h-3.5 w-3.5 sm:h-4 sm:w-4 ml-2" />
             התחל התקפה
           </Button>
         </div>
@@ -1180,7 +1428,7 @@ export function GameWithLeaflet() {
           selectedBattery={selectedBattery}
           onSelectBatteryType={startPlacingBattery}
           onSelectRadarType={startPlacingRadar}
-          onCancel={cancelPlacement}
+          onCancel={wrappedCancelPlacement}
         />
       )}
       
@@ -1191,8 +1439,8 @@ export function GameWithLeaflet() {
             battery={selectedBattery}
             budget={budget}
             ammoPool={ammoPool}
-            onReload={reloadBattery}
-            onClose={() => selectBattery(null)}
+            onReload={wrappedReloadBattery}
+            onClose={() => wrappedSelectBattery(null)}
           />
         )}
       </AnimatePresence>
@@ -1201,9 +1449,9 @@ export function GameWithLeaflet() {
       <WaveCompleteModal
         isOpen={phase === 'waveComplete'}
         wave={wave}
-        onOpenShop={openShop}
+        onOpenShop={wrappedOpenShop}
         onNextWave={() => {
-          nextWave();
+          wrappedNextWave();
           soundManager.play('waveComplete');
         }}
       />
@@ -1218,20 +1466,20 @@ export function GameWithLeaflet() {
         upgrades={upgrades}
         laserUnlocked={laserUnlocked}
         storyChapterId={storyChapterId}
-        onPurchaseUpgrade={purchaseUpgrade}
-        onUnlockLaser={unlockLaser}
-        onPurchaseMoraleBoost={purchaseMoraleBoost}
-        onBuyBudgetWithDiamonds={buyBudgetWithDiamonds}
+        onPurchaseUpgrade={wrappedPurchaseUpgrade}
+        onUnlockLaser={wrappedUnlockLaser}
+        onPurchaseMoraleBoost={wrappedPurchaseMoraleBoost}
+        onBuyBudgetWithDiamonds={wrappedBuyBudgetWithDiamonds}
         hasThaadBatteries={batteries.some(b => b.type === 'thaad')}
         hasThaadNeedingAmmo={batteries.some(b => b.type === 'thaad' && (b.ammo ?? 0) < (b.maxAmmo ?? getGameConfig().THAAD?.maxAmmo ?? 20))}
-        onBuyThaadAmmo={useGameStore.getState().buyThaadAmmo}
+        onBuyThaadAmmo={wrappedBuyThaadAmmo}
         thaadUpgradePurchased={(useGameStore.getState().thaadExtraAmmo ?? 0) > 0}
-        onPurchaseThaadUpgrade={useGameStore.getState().purchaseThaadUpgrade}
+        onPurchaseThaadUpgrade={wrappedPurchaseThaadUpgrade}
         onNextWave={() => {
-          nextWave();
+          wrappedNextWave();
           soundManager.play('waveComplete');
         }}
-        onClose={() => setPhase('waveComplete')}
+        onClose={() => wrappedSetPhase('waveComplete')}
       />
       
       {/* Game Over Modal */}

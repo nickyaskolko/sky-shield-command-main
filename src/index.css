@@ -201,11 +201,20 @@
 
   html {
     font-family: 'Heebo', sans-serif;
+    height: 100%;
+    min-height: 100dvh;
   }
 
   body {
     @apply bg-background text-foreground;
     direction: rtl;
+    min-height: 100%;
+    min-height: 100dvh;
+  }
+
+  #root {
+    height: 100%;
+    min-height: 100dvh;
   }
 }
 
@@ -288,23 +297,26 @@
   }
 }
 
-/* Game viewport: safe area + full height on mobile */
+/* Game viewport: safe area + full height on mobile (fixes blue/blank screen on phone) */
 .game-viewport {
   padding-top: var(--sat);
   padding-right: var(--sar);
   padding-bottom: var(--sab);
   padding-left: var(--sal);
+  height: 100%;
   min-height: 100dvh;
   min-height: 100vh;
   touch-action: pan-x pan-y pinch-zoom;
+  -webkit-overflow-scrolling: touch;
 }
 
-/* HUD & Action bar: more compact on small screens */
+/* HUD & Action bar: compact on small screens */
 @media (max-width: 640px) {
-  .game-viewport .hud-morale { min-width: 100px; }
-  .game-viewport .hud-center { gap: 0.5rem; }
-  .game-viewport .hud-ammo-panel { max-height: 140px; overflow-y: auto; }
+  .game-viewport .hud-morale { min-width: 70px; }
+  .game-viewport .hud-center { gap: 0.25rem; }
+  .game-viewport .hud-ammo-panel { max-height: 100px; overflow-y: auto; }
 }
+
 
 /* Leaflet: ensure touch works on map (pan/zoom) */
 .leaflet-container {

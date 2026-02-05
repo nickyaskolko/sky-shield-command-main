@@ -10,6 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { usePlayerStore } from '@/store/playerStore';
 import { getGameConfig } from '@/lib/game/gameConfigLoader';
+import { analytics } from '@/lib/analytics';
 import { Gift } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -37,6 +38,7 @@ export function DailyRewardModal({ isOpen, onClose }: DailyRewardModalProps) {
   const handleClaim = () => {
     const result = claimDailyReward();
     if (result.claimed && result.reward) {
+      analytics.dailyRewardClaim(result.reward.day, result.reward.diamonds);
       setClaimedToday(true);
       setTimeout(() => onClose(), 1500);
     }

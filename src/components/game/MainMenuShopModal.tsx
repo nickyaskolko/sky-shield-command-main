@@ -9,6 +9,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { usePlayerStore } from '@/store/playerStore';
 import { getGameConfig } from '@/lib/game/gameConfigLoader';
+import { analytics } from '@/lib/analytics';
 import { ShoppingBag, Radio, Heart, Info } from 'lucide-react';
 
 interface MainMenuShopModalProps {
@@ -70,7 +71,10 @@ export function MainMenuShopModal({ isOpen, onClose }: MainMenuShopModalProps) {
               </p>
             )}
             <Button
-              onClick={() => purchaseFullCoverage()}
+              onClick={() => {
+                analytics.purchase('main_shop_full_coverage', fullCost, 'diamonds');
+                purchaseFullCoverage();
+              }}
               disabled={diamonds < fullCost}
               className="w-full bg-amber-500 hover:bg-amber-600 text-game-panel font-bold disabled:opacity-50"
             >
@@ -94,7 +98,10 @@ export function MainMenuShopModal({ isOpen, onClose }: MainMenuShopModalProps) {
               </p>
             )}
             <Button
-              onClick={() => purchaseExtraStartingMorale()}
+              onClick={() => {
+                analytics.purchase('main_shop_extra_morale', moraleCost, 'diamonds');
+                purchaseExtraStartingMorale();
+              }}
               disabled={diamonds < moraleCost}
               variant="outline"
               className="w-full border-amber-500 text-amber-300 hover:bg-amber-500/20 disabled:opacity-50"

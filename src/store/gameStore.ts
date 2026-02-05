@@ -54,6 +54,7 @@ import { getInitialCitiesForMap } from '@/lib/game/israelMap';
 import { t } from '@/lib/i18n/he';
 import { projectilePool, type PooledProjectile } from '@/lib/game/objectPool';
 import type { RandomEvent } from '@/lib/game/randomEvents';
+import type { GameStateSnapshot } from '@/lib/game/multiplayerSnapshot';
 
 interface WaveSpawnQueue {
   spawns: ThreatSpawn[];
@@ -155,6 +156,10 @@ interface GameStore extends GameState {
   update: (deltaTime: number, currentTime: number) => void;
   initializeCities: (width: number, height: number) => void;
   clearError: () => void;
+  /** Multiplayer: build serializable snapshot for broadcast (host). */
+  getSerializableStateSnapshot: () => GameStateSnapshot;
+  /** Multiplayer: replace state from host snapshot (guest). */
+  replaceStateFromHost: (snapshot: GameStateSnapshot) => void;
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -1320,6 +1325,106 @@ export const useGameStore = create<GameStore>((set, get) => ({
         },
         consecutiveInterceptions: s.consecutiveInterceptions + interceptions,
       };
+    });
+  },
+
+  getSerializableStateSnapshot: (): GameStateSnapshot => {
+    const s = get();
+    return {
+      phase: s.phase,
+      budget: s.budget,
+      morale: s.morale,
+      score: s.score,
+      wave: s.wave,
+      isEndless: s.isEndless,
+      cities: [...s.cities],
+      threats: s.threats.map(t => ({ ...t, trailPositions: [...(t.trailPositions || [])] })),
+      batteries: s.batteries.map(b => ({ ...b })),
+      projectiles: s.projectiles.map(p => ({ ...p, trailPositions: [...(p.trailPositions || [])] })),
+      explosions: s.explosions.map(e => ({ ...e, particles: [...(e.particles || [])] })),
+      laserBeams: s.laserBeams.map(l => ({ ...l })),
+      radars: s.radars.map(r => ({ ...r })),
+      selectedBatteryId: s.selectedBatteryId,
+      placingBatteryType: s.placingBatteryType,
+      placingRadarType: s.placingRadarType,
+      previewPosition: s.previewPosition ? { x: s.previewPosition.x, y: s.previewPosition.y } : null,
+      upgrades: { ...s.upgrades },
+      laserUnlocked: s.laserUnlocked,
+      ammoPool: { ...s.ammoPool },
+      stats: { ...s.stats },
+      notifications: [...s.notifications],
+      cityHitLog: [...s.cityHitLog],
+      enemyTerritoryFallLog: [...s.enemyTerritoryFallLog],
+      screenShake: s.screenShake,
+      fullCoverageRemaining: s.fullCoverageRemaining,
+      alliedSupportUsed: s.alliedSupportUsed,
+      waveSpawnQueue: {
+        spawns: [...s.waveSpawnQueue.spawns],
+        currentIndex: s.waveSpawnQueue.currentIndex,
+        spawnTimer: s.waveSpawnQueue.spawnTimer,
+        targetCityIds: [...s.waveSpawnQueue.targetCityIds],
+      },
+      combo: { ...s.combo },
+      waveDamageCount: s.waveDamageCount,
+      consecutiveInterceptions: s.consecutiveInterceptions,
+      canvasWidth: s.canvasWidth,
+      canvasHeight: s.canvasHeight,
+      waveCompleteReadyAt: s.waveCompleteReadyAt,
+      preparationStartedAt: s.preparationStartedAt,
+      cityHitFlashUntil: s.cityHitFlashUntil,
+      waveStartShowUntil: s.waveStartShowUntil,
+      gameMode: s.gameMode,
+      storyChapterId: s.storyChapterId,
+      activeEvent: s.activeEvent ? { ...s.activeEvent, effect: { ...s.activeEvent.effect } } : null,
+      activeEventStartedAt: s.activeEventStartedAt,
+      thaadExtraAmmo: s.thaadExtraAmmo,
+    };
+  },
+
+  replaceStateFromHost: (snapshot) => {
+    set({
+      phase: snapshot.phase,
+      budget: snapshot.budget,
+      morale: snapshot.morale,
+      score: snapshot.score,
+      wave: snapshot.wave,
+      isEndless: snapshot.isEndless,
+      cities: snapshot.cities,
+      threats: snapshot.threats,
+      batteries: snapshot.batteries,
+      projectiles: snapshot.projectiles,
+      explosions: snapshot.explosions,
+      laserBeams: snapshot.laserBeams,
+      radars: snapshot.radars,
+      selectedBatteryId: snapshot.selectedBatteryId,
+      placingBatteryType: snapshot.placingBatteryType as BatteryType | null,
+      placingRadarType: snapshot.placingRadarType as RadarType | null,
+      previewPosition: snapshot.previewPosition,
+      upgrades: snapshot.upgrades,
+      laserUnlocked: snapshot.laserUnlocked,
+      ammoPool: snapshot.ammoPool,
+      stats: snapshot.stats,
+      notifications: snapshot.notifications,
+      cityHitLog: snapshot.cityHitLog,
+      enemyTerritoryFallLog: snapshot.enemyTerritoryFallLog,
+      screenShake: snapshot.screenShake,
+      fullCoverageRemaining: snapshot.fullCoverageRemaining,
+      alliedSupportUsed: snapshot.alliedSupportUsed,
+      waveSpawnQueue: snapshot.waveSpawnQueue,
+      combo: snapshot.combo,
+      waveDamageCount: snapshot.waveDamageCount,
+      consecutiveInterceptions: snapshot.consecutiveInterceptions,
+      canvasWidth: snapshot.canvasWidth,
+      canvasHeight: snapshot.canvasHeight,
+      waveCompleteReadyAt: snapshot.waveCompleteReadyAt,
+      preparationStartedAt: snapshot.preparationStartedAt,
+      cityHitFlashUntil: snapshot.cityHitFlashUntil,
+      waveStartShowUntil: snapshot.waveStartShowUntil,
+      gameMode: snapshot.gameMode,
+      storyChapterId: snapshot.storyChapterId,
+      activeEvent: snapshot.activeEvent,
+      activeEventStartedAt: snapshot.activeEventStartedAt,
+      thaadExtraAmmo: snapshot.thaadExtraAmmo,
     });
   },
 }));

@@ -14,6 +14,7 @@ import { Upgrades } from '@/lib/game/entities';
 import { getGameConfig } from '@/lib/game/gameConfigLoader';
 import { getNarrativeBetweenWaves } from '@/lib/game/storyMode';
 import { cn } from '@/lib/utils';
+import { analytics } from '@/lib/analytics';
 
 interface ShopModalProps {
   isOpen: boolean;
@@ -122,7 +123,10 @@ export function ShopModal({
               <Button
                 key={n}
                 size="sm"
-                onClick={() => onBuyBudgetWithDiamonds(n)}
+                onClick={() => {
+                  analytics.purchase('budget_diamonds', n, 'diamonds');
+                  onBuyBudgetWithDiamonds(n);
+                }}
                 disabled={diamonds < n}
                 variant="outline"
                 className="border-amber-500 text-amber-300 hover:bg-amber-500/20 disabled:opacity-50"
@@ -147,7 +151,10 @@ export function ShopModal({
             </div>
             <Button
               size="sm"
-              onClick={onBuyThaadAmmo}
+              onClick={() => {
+                analytics.purchase('thaad_ammo', thaadAmmoCost, 'budget');
+                onBuyThaadAmmo?.();
+              }}
               disabled={!canBuyThaadAmmo}
               variant="outline"
               className="border-blue-500 text-blue-300 hover:bg-blue-500/20 disabled:opacity-50 min-w-[72px]"
@@ -174,7 +181,10 @@ export function ShopModal({
             ) : (
               <Button
                 size="sm"
-                onClick={() => onPurchaseThaadUpgrade()}
+                onClick={() => {
+                  analytics.purchase('thaad_upgrade', 5, 'diamonds');
+                  onPurchaseThaadUpgrade();
+                }}
                 disabled={diamonds < 5}
                 variant="outline"
                 className="border-amber-500 text-amber-300 hover:bg-amber-500/20 disabled:opacity-50 min-w-[72px]"
@@ -195,7 +205,11 @@ export function ShopModal({
             maxLevel={4}
             costDiamonds={costInDiamonds(getGameConfig().UPGRADE_COSTS.reloadSpeed[upgrades.reloadSpeed] ?? 0)}
             canAffordDiamonds={diamonds >= costInDiamonds(getGameConfig().UPGRADE_COSTS.reloadSpeed[upgrades.reloadSpeed] ?? 0)}
-            onPurchaseWithDiamonds={() => onPurchaseUpgrade('reloadSpeed', true)}
+            onPurchaseWithDiamonds={() => {
+              const cost = costInDiamonds(getGameConfig().UPGRADE_COSTS.reloadSpeed[upgrades.reloadSpeed] ?? 0);
+              analytics.purchase('upgrade_reloadSpeed', cost, 'diamonds');
+              onPurchaseUpgrade('reloadSpeed', true);
+            }}
           />
           
           {/* Radar Range – battery engagement range (not radar detection range) */}
@@ -207,7 +221,11 @@ export function ShopModal({
             maxLevel={4}
             costDiamonds={costInDiamonds(getGameConfig().UPGRADE_COSTS.radarRange[upgrades.radarRange] ?? 0)}
             canAffordDiamonds={diamonds >= costInDiamonds(getGameConfig().UPGRADE_COSTS.radarRange[upgrades.radarRange] ?? 0)}
-            onPurchaseWithDiamonds={() => onPurchaseUpgrade('radarRange', true)}
+            onPurchaseWithDiamonds={() => {
+              const cost = costInDiamonds(getGameConfig().UPGRADE_COSTS.radarRange[upgrades.radarRange] ?? 0);
+              analytics.purchase('upgrade_radarRange', cost, 'diamonds');
+              onPurchaseUpgrade('radarRange', true);
+            }}
           />
           
           {/* Max Ammo – more ammo per battery */}
@@ -219,7 +237,11 @@ export function ShopModal({
             maxLevel={4}
             costDiamonds={costInDiamonds(getGameConfig().UPGRADE_COSTS.maxAmmo[upgrades.maxAmmo] ?? 0)}
             canAffordDiamonds={diamonds >= costInDiamonds(getGameConfig().UPGRADE_COSTS.maxAmmo[upgrades.maxAmmo] ?? 0)}
-            onPurchaseWithDiamonds={() => onPurchaseUpgrade('maxAmmo', true)}
+            onPurchaseWithDiamonds={() => {
+              const cost = costInDiamonds(getGameConfig().UPGRADE_COSTS.maxAmmo[upgrades.maxAmmo] ?? 0);
+              analytics.purchase('upgrade_maxAmmo', cost, 'diamonds');
+              onPurchaseUpgrade('maxAmmo', true);
+            }}
           />
           
           {/* Morale Boost – one-time purchase per shop visit */}
@@ -238,7 +260,10 @@ export function ShopModal({
             ) : canBuyMorale ? (
               <Button
                 size="sm"
-                onClick={onPurchaseMoraleBoost}
+                onClick={() => {
+                  analytics.purchase('morale_boost', moraleBoostCost, 'diamonds');
+                  onPurchaseMoraleBoost();
+                }}
                 variant="outline"
                 className="min-w-[80px] border-amber-500 text-amber-300 hover:bg-amber-500/20"
               >
@@ -269,7 +294,11 @@ export function ShopModal({
                 <div className="flex items-center gap-2">
                   {diamonds >= costInDiamonds(getGameConfig().LASER_COST) ? (
                     <Button
-                      onClick={() => onUnlockLaser(true)}
+                      onClick={() => {
+                        const cost = costInDiamonds(getGameConfig().LASER_COST);
+                        analytics.purchase('laser_unlock', cost, 'diamonds');
+                        onUnlockLaser(true);
+                      }}
                       variant="outline"
                       className="border-amber-500 text-amber-300 hover:bg-amber-500/20"
                     >

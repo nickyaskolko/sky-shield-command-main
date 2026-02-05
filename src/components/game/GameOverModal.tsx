@@ -118,7 +118,7 @@ export function GameOverModal({
             variant="outline"
             size="lg"
             className="w-full border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10"
-            onClick={() => console.log('Ad placeholder')}
+            onClick={() => { /* TODO: emergency funds / ad monetization */ }}
           >
             {t('emergencyFunds')}
           </Button>

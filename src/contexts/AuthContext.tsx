@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { analytics } from '@/lib/analytics';
 
 interface AuthContextValue {
   user: User | null;
@@ -57,6 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { data } = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
         if (cancelled) return;
         if ((data as { banned?: boolean } | null)?.banned) {
+          analytics.authBlocked(user.id);
           setBlockedMessage('חשבונך חסום מגישה לאתר. פנה למנהל.');
           await supabase.auth.signOut();
           setSession(null);

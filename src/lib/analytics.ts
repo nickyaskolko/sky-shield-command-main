@@ -111,20 +111,46 @@ export async function trackEvent(
 
 export const analytics = {
   // צפיות בדף
-  pageView: () => trackEvent('page_view'),
-  
+  pageView: (extra?: { path?: string; is_logged_in?: boolean }) =>
+    trackEvent('page_view', extra || {}),
+
   // משחק
-  gameStart: (mode: string) => trackEvent('game_start', { mode }),
-  waveComplete: (wave: number, score: number) => trackEvent('wave_complete', { wave, score }),
-  gameOver: (score: number, wavesCompleted: number) => trackEvent('game_over', { score, wavesCompleted }),
-  
+  gameStart: (mode: string, has_saved_game?: boolean) =>
+    trackEvent('game_start', { mode, has_saved_game: !!has_saved_game }),
+  waveComplete: (wave: number, score: number, perfect?: boolean, combo_max?: number) =>
+    trackEvent('wave_complete', { wave, score, perfect: !!perfect, combo_max: combo_max ?? 0 }),
+  gameOver: (score: number, wavesCompleted: number, wave?: number, time_played_seconds?: number) =>
+    trackEvent('game_over', { score, wavesCompleted, wave: wave ?? 0, time_played_seconds: time_played_seconds ?? 0 }),
+
   // חנות
   shopOpen: () => trackEvent('shop_open'),
-  purchase: (itemId: string, price: number) => trackEvent('purchase', { itemId, price }),
-  
+  purchase: (itemId: string, price: number, currency: 'diamonds' | 'budget' = 'diamonds') =>
+    trackEvent('purchase', { itemId, price, currency }),
+
   // אתגרים
   challengeComplete: (challengeId: string) => trackEvent('challenge_complete', { challengeId }),
-  
+
+  // התחברות חסומה
+  authBlocked: (userId?: string) => trackEvent('auth_blocked', { user_id: userId ?? null }),
+
+  // מצב סיפור
+  storyStart: (chapterId: string) => trackEvent('story_start', { chapter_id: chapterId }),
+  storyChapterComplete: (chapterId: string, wave: number) =>
+    trackEvent('story_chapter_complete', { chapter_id: chapterId, wave }),
+
+  // פרס יומי
+  dailyRewardClaim: (day: number, diamonds: number) =>
+    trackEvent('daily_reward_claim', { day, diamonds }),
+
+  // הדרכה
+  tutorialStart: () => trackEvent('tutorial_start'),
+  tutorialComplete: () => trackEvent('tutorial_complete'),
+  tutorialSkip: (step: number) => trackEvent('tutorial_skip', { step }),
+
+  // המשך משחק
+  savedGameContinue: () => trackEvent('saved_game_continue'),
+  resumeFail: () => trackEvent('resume_fail'),
+
   // כללי
   custom: (name: string, data?: Record<string, unknown>) => trackEvent(name, data || {}),
 };

@@ -22,40 +22,40 @@ export function BuffsPanel() {
   const canAffordThaad = budget >= thaadCost;
 
   return (
-    <div className="absolute bottom-20 left-4 z-20 flex flex-col gap-2 pointer-events-auto" dir="rtl">
-      <span className="text-game-text-dim text-xs font-medium mb-0.5">באפים וסיוע</span>
-      <div className="flex flex-col gap-2">
+    <div className="absolute bottom-14 sm:bottom-20 left-1 sm:left-4 z-20 flex flex-col gap-1.5 sm:gap-2 pointer-events-auto max-w-[calc(100vw-2rem)]" dir="rtl">
+      <span className="text-game-text-dim text-[10px] sm:text-xs font-medium mb-0.5">באפים</span>
+      <div className="flex flex-col gap-1 sm:gap-2">
         {fullAvailable && (
           <Button
             size="sm"
             variant="outline"
-            className="border-amber-500/50 text-amber-200 hover:bg-amber-500/20 bg-game-panel/90"
+            className="border-amber-500/50 text-amber-200 hover:bg-amber-500/20 bg-game-panel/90 text-[10px] sm:text-xs min-h-[34px] sm:min-h-[36px] py-1 px-2"
             onClick={() => activateFullCoverage(fullSeconds)}
           >
-            <Radio className="h-4 w-4 ml-1.5" />
-            כיסוי מלא ({fullSeconds}s) – הפעל
+            <Radio className="h-3 w-3 sm:h-4 sm:w-4 ml-1 shrink-0" />
+            <span className="truncate">כיסוי {fullSeconds}s</span>
           </Button>
         )}
         {moraleAvailable && (
           <Button
             size="sm"
             variant="outline"
-            className="border-red-400/50 text-red-200 hover:bg-red-500/20 bg-game-panel/90"
+            className="border-red-400/50 text-red-200 hover:bg-red-500/20 bg-game-panel/90 text-[10px] sm:text-xs min-h-[34px] sm:min-h-[36px] py-1 px-2"
             onClick={() => addMorale(moraleAmount)}
           >
-            <Heart className="h-4 w-4 ml-1.5" />
-            בונוס מורל +{moraleAmount} – הפעל
+            <Heart className="h-3 w-3 sm:h-4 sm:w-4 ml-1 shrink-0" />
+            <span className="truncate">מורל +{moraleAmount}</span>
           </Button>
         )}
         <Button
           size="sm"
           variant="outline"
-          className="border-blue-400/50 text-blue-200 hover:bg-blue-500/20 bg-game-panel/90 disabled:opacity-50"
+          className="border-blue-400/50 text-blue-200 hover:bg-blue-500/20 bg-game-panel/90 disabled:opacity-50 text-[10px] sm:text-xs min-h-[34px] sm:min-h-[36px] py-1 px-2"
           onClick={() => startPlacingBattery('thaad')}
           disabled={!canAffordThaad}
         >
-          <Shield className="h-4 w-4 ml-1.5" />
-          הצב THAAD (סיוע ברית) – ₪{thaadCost.toLocaleString()}
+          <Shield className="h-3 w-3 sm:h-4 sm:w-4 ml-1 shrink-0" />
+          <span className="truncate">THAAD ₪{thaadCost.toLocaleString()}</span>
         </Button>
       </div>
     </div>

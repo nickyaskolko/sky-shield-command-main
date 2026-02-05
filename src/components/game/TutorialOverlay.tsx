@@ -1,9 +1,10 @@
 // Tutorial Overlay – הדרכה ראשונה
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Radio, Target, ShoppingCart } from 'lucide-react';
+import { analytics } from '@/lib/analytics';
 
 /** טבלה: מערכת יירוט → איומים שהיא מיירטת (לעמוד האחרון בהוראות) */
 const INTERCEPTION_TABLE: { system: string; threats: string }[] = [
@@ -46,6 +47,10 @@ interface TutorialOverlayProps {
 
 export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
   const [step, setStep] = useState(0);
+
+  useEffect(() => {
+    if (isOpen) analytics.tutorialStart();
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -92,14 +97,20 @@ export function TutorialOverlay({ isOpen, onClose }: TutorialOverlayProps) {
           <Button
             variant="ghost"
             className="text-game-text-dim hover:text-game-accent"
-            onClick={() => { onClose(); }}
+            onClick={() => {
+              analytics.tutorialSkip(step);
+              onClose();
+            }}
           >
             דלג
           </Button>
           {isLast ? (
             <Button
               className="bg-game-accent text-game-panel"
-              onClick={() => { onClose(); }}
+              onClick={() => {
+                analytics.tutorialComplete();
+                onClose();
+              }}
             >
               הבנתי
             </Button>

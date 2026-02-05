@@ -1,6 +1,6 @@
 // Admin panel – דף אדמין (גישה רק למשתמשים מטבלת admin_users)
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Shield, Users, Trophy, ArrowRight, Loader2, Plus, Trash2, Pencil, Calendar, Zap, UserX, BarChart3, Globe, Smartphone, BookOpen, Sparkles } from 'lucide-react';
+import { Shield, Users, Trophy, ArrowRight, Loader2, Plus, Trash2, Pencil, Calendar, Zap, UserX, BarChart3, Globe, Smartphone, BookOpen, Sparkles, ShoppingCart, CirclePlay, Activity } from 'lucide-react';
 import { usePlayerStore } from '@/store/playerStore';
 
 const CHALLENGE_TYPES = ['intercept_any', 'perfect_wave', 'combo', 'waves_completed'] as const;
@@ -60,6 +60,13 @@ const BLOCK_REASONS = [
   { value: 'harassment', label: 'הטרדה' },
   { value: 'user_request', label: 'בקשת משתמש' },
   { value: 'other', label: 'אחר (פרט בהערה)' },
+] as const;
+
+const ANALYTICS_PERIODS = [
+  { value: 1, label: 'יומי (24 שעות)' },
+  { value: 7, label: 'שבועי (7 ימים)' },
+  { value: 30, label: 'חודשי (30 ימים)' },
+  { value: 365, label: 'שנתי (12 חודשים)' },
 ] as const;
 
 export default function Admin() {
@@ -115,10 +122,25 @@ export default function Admin() {
     uniqueVisitors: number;
     gamesStarted: number;
     topCountry: string;
+    topCountryCount: number;
+    authBlockedCount: number;
+    storyStarts: number;
+    storyChaptersCompleted: number;
+    dailyRewardClaims: number;
+    tutorialStarts: number;
+    tutorialCompletes: number;
+    tutorialSkips: number;
+    savedGameContinues: number;
+    resumeFails: number;
+    shopOpens: number;
+    purchasesCount: number;
     byCountry: Record<string, number>;
     byDevice: Record<string, number>;
   } | null>(null);
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
+  const [analyticsDaysBack, setAnalyticsDaysBack] = useState<number>(7);
+  const [activeNowCount, setActiveNowCount] = useState<number | null>(null);
+  const [loadingActiveNow, setLoadingActiveNow] = useState(false);
   const godMode = usePlayerStore((s) => s.godMode);
   const setGodMode = usePlayerStore((s) => s.setGodMode);
 
@@ -209,31 +231,30 @@ export default function Admin() {
     }
   };
 
-  const loadAnalytics = async () => {
+  const loadAnalytics = async (daysOverride?: number) => {
     setLoadingAnalytics(true);
+    const days = daysOverride ?? analyticsDaysBack;
+    const fromDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
     try {
-      // סטטיסטיקות כלליות (7 ימים)
-      const { data: summary } = await supabase.rpc('get_analytics_summary', { days_back: 7 });
+      const { data: summary } = await supabase.rpc('get_analytics_summary', { days_back: days });
       
-      // לפי מדינה
       const { data: countryData } = await supabase
         .from('analytics_events')
         .select('country')
         .eq('event_type', 'page_view')
         .not('country', 'is', null)
-        .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+        .gte('created_at', fromDate);
       
       const byCountry: Record<string, number> = {};
       countryData?.forEach(row => {
         byCountry[row.country] = (byCountry[row.country] || 0) + 1;
       });
       
-      // לפי מכשיר
       const { data: deviceData } = await supabase
         .from('analytics_events')
         .select('device_type')
         .eq('event_type', 'page_view')
-        .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+        .gte('created_at', fromDate);
       
       const byDevice: Record<string, number> = {};
       deviceData?.forEach(row => {
@@ -241,11 +262,24 @@ export default function Admin() {
         byDevice[d] = (byDevice[d] || 0) + 1;
       });
       
+      const row = summary?.[0];
       setAnalyticsStats({
-        totalVisits: Number(summary?.[0]?.total_visits) || 0,
-        uniqueVisitors: Number(summary?.[0]?.unique_visitors) || 0,
-        gamesStarted: Number(summary?.[0]?.games_started) || 0,
-        topCountry: summary?.[0]?.top_country || 'לא ידוע',
+        totalVisits: Number(row?.total_visits) || 0,
+        uniqueVisitors: Number(row?.unique_visitors) || 0,
+        gamesStarted: Number(row?.games_started) || 0,
+        topCountry: row?.top_country || 'לא ידוע',
+        topCountryCount: Number(row?.top_country_count) || 0,
+        authBlockedCount: Number(row?.auth_blocked_count) || 0,
+        storyStarts: Number(row?.story_starts) || 0,
+        storyChaptersCompleted: Number(row?.story_chapters_completed) || 0,
+        dailyRewardClaims: Number(row?.daily_reward_claims) || 0,
+        tutorialStarts: Number(row?.tutorial_starts) || 0,
+        tutorialCompletes: Number(row?.tutorial_completes) || 0,
+        tutorialSkips: Number(row?.tutorial_skips) || 0,
+        savedGameContinues: Number(row?.saved_game_continues) || 0,
+        resumeFails: Number(row?.resume_fails) || 0,
+        shopOpens: Number(row?.shop_opens) || 0,
+        purchasesCount: Number(row?.purchases_count) || 0,
         byCountry,
         byDevice,
       });
@@ -256,6 +290,30 @@ export default function Admin() {
       setLoadingAnalytics(false);
     }
   };
+
+  const loadActiveNow = useCallback(async () => {
+    setLoadingActiveNow(true);
+    try {
+      const { data, error } = await supabase.rpc('get_active_visitors_count', { minutes_back: 5 });
+      if (error) {
+        setActiveNowCount(null);
+        return;
+      }
+      const raw = Array.isArray(data) ? data[0] : data;
+      if (raw !== undefined && raw !== null) setActiveNowCount(Number(raw));
+      else setActiveNowCount(null);
+    } catch {
+      setActiveNowCount(null);
+    } finally {
+      setLoadingActiveNow(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadActiveNow();
+    const t = setInterval(loadActiveNow, 45000);
+    return () => clearInterval(t);
+  }, [loadActiveNow]);
 
   const resetUserProfile = async (userId: string) => {
     setResettingUserId(userId);
@@ -606,12 +664,39 @@ export default function Admin() {
 
           <TabsContent value="analytics" className="space-y-4">
             <section className="bg-game-panel/60 border border-game-accent/30 rounded-xl p-6">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                 <h2 className="text-xl font-semibold text-game-accent flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5" /> אנליטיקס (7 ימים אחרונים)
+                  <BarChart3 className="h-5 w-5" /> אנליטיקס
                 </h2>
-                <Button size="sm" onClick={loadAnalytics} disabled={loadingAnalytics} variant="outline" className="border-game-accent/50">
-                  {loadingAnalytics ? <Loader2 className="h-4 w-4 animate-spin" /> : 'רענן'}
+                <div className="flex flex-wrap items-center gap-2">
+                  <Select value={String(analyticsDaysBack)} onValueChange={(v) => { const d = Number(v); setAnalyticsDaysBack(d); loadAnalytics(d); }}>
+                    <SelectTrigger className="w-[180px] bg-game-bg/60 border-game-accent/20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ANALYTICS_PERIODS.map((p) => (
+                        <SelectItem key={p.value} value={String(p.value)}>{p.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button size="sm" onClick={loadAnalytics} disabled={loadingAnalytics} variant="outline" className="border-game-accent/50">
+                    {loadingAnalytics ? <Loader2 className="h-4 w-4 animate-spin" /> : 'רענן'}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-4 mb-4 p-4 bg-game-bg/30 rounded-lg border border-game-accent/20">
+                <div className="flex items-center gap-2">
+                  <Activity className="h-5 w-5 text-green-500" />
+                  <span className="text-game-text font-medium">משתמשים אונליין עכשיו (5 דקות אחרונות):</span>
+                  {loadingActiveNow ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-game-accent" />
+                  ) : (
+                    <span className="text-xl font-bold text-game-accent">{activeNowCount !== null ? activeNowCount.toLocaleString() : '—'}</span>
+                  )}
+                </div>
+                <Button size="sm" variant="ghost" onClick={loadActiveNow} disabled={loadingActiveNow} className="text-game-text-dim">
+                  רענן
                 </Button>
               </div>
               
@@ -637,6 +722,66 @@ export default function Admin() {
                     <div className="p-4 bg-game-bg/40 rounded-lg text-center">
                       <p className="text-game-text-dim text-sm">מדינה מובילה</p>
                       <p className="text-lg font-bold text-game-accent">{analyticsStats.topCountry}</p>
+                      <p className="text-xs text-game-text-dim">({analyticsStats.topCountryCount.toLocaleString()} צפיות)</p>
+                    </div>
+                  </div>
+
+                  <h3 className="text-lg font-semibold text-game-accent mb-2 mt-6">מדדים נוספים</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 mb-6">
+                    <div className="p-3 bg-game-bg/40 rounded-lg text-center flex flex-col items-center gap-1">
+                      <UserX className="h-4 w-4 text-game-text-dim" />
+                      <p className="text-game-text-dim text-xs">חסימת אימות</p>
+                      <p className="text-lg font-bold text-game-accent">{analyticsStats.authBlockedCount.toLocaleString()}</p>
+                    </div>
+                    <div className="p-3 bg-game-bg/40 rounded-lg text-center flex flex-col items-center gap-1">
+                      <BookOpen className="h-4 w-4 text-game-text-dim" />
+                      <p className="text-game-text-dim text-xs">התחלות סיפור</p>
+                      <p className="text-lg font-bold text-game-accent">{analyticsStats.storyStarts.toLocaleString()}</p>
+                    </div>
+                    <div className="p-3 bg-game-bg/40 rounded-lg text-center flex flex-col items-center gap-1">
+                      <BookOpen className="h-4 w-4 text-game-text-dim" />
+                      <p className="text-game-text-dim text-xs">פרקים שהושלמו</p>
+                      <p className="text-lg font-bold text-game-accent">{analyticsStats.storyChaptersCompleted.toLocaleString()}</p>
+                    </div>
+                    <div className="p-3 bg-game-bg/40 rounded-lg text-center flex flex-col items-center gap-1">
+                      <Sparkles className="h-4 w-4 text-game-text-dim" />
+                      <p className="text-game-text-dim text-xs">תגמול יומי</p>
+                      <p className="text-lg font-bold text-game-accent">{analyticsStats.dailyRewardClaims.toLocaleString()}</p>
+                    </div>
+                    <div className="p-3 bg-game-bg/40 rounded-lg text-center flex flex-col items-center gap-1">
+                      <CirclePlay className="h-4 w-4 text-game-text-dim" />
+                      <p className="text-game-text-dim text-xs">התחלות הדרכה</p>
+                      <p className="text-lg font-bold text-game-accent">{analyticsStats.tutorialStarts.toLocaleString()}</p>
+                    </div>
+                    <div className="p-3 bg-game-bg/40 rounded-lg text-center flex flex-col items-center gap-1">
+                      <CirclePlay className="h-4 w-4 text-game-text-dim" />
+                      <p className="text-game-text-dim text-xs">הדרכה הושלמה</p>
+                      <p className="text-lg font-bold text-game-accent">{analyticsStats.tutorialCompletes.toLocaleString()}</p>
+                    </div>
+                    <div className="p-3 bg-game-bg/40 rounded-lg text-center flex flex-col items-center gap-1">
+                      <CirclePlay className="h-4 w-4 text-game-text-dim" />
+                      <p className="text-game-text-dim text-xs">דילוג הדרכה</p>
+                      <p className="text-lg font-bold text-game-accent">{analyticsStats.tutorialSkips.toLocaleString()}</p>
+                    </div>
+                    <div className="p-3 bg-game-bg/40 rounded-lg text-center flex flex-col items-center gap-1">
+                      <Zap className="h-4 w-4 text-game-text-dim" />
+                      <p className="text-game-text-dim text-xs">המשך משחק שמור</p>
+                      <p className="text-lg font-bold text-game-accent">{analyticsStats.savedGameContinues.toLocaleString()}</p>
+                    </div>
+                    <div className="p-3 bg-game-bg/40 rounded-lg text-center flex flex-col items-center gap-1">
+                      <Zap className="h-4 w-4 text-game-text-dim" />
+                      <p className="text-game-text-dim text-xs">כשלון המשך</p>
+                      <p className="text-lg font-bold text-game-accent">{analyticsStats.resumeFails.toLocaleString()}</p>
+                    </div>
+                    <div className="p-3 bg-game-bg/40 rounded-lg text-center flex flex-col items-center gap-1">
+                      <ShoppingCart className="h-4 w-4 text-game-text-dim" />
+                      <p className="text-game-text-dim text-xs">פתיחות חנות</p>
+                      <p className="text-lg font-bold text-game-accent">{analyticsStats.shopOpens.toLocaleString()}</p>
+                    </div>
+                    <div className="p-3 bg-game-bg/40 rounded-lg text-center flex flex-col items-center gap-1">
+                      <ShoppingCart className="h-4 w-4 text-game-text-dim" />
+                      <p className="text-game-text-dim text-xs">רכישות</p>
+                      <p className="text-lg font-bold text-game-accent">{analyticsStats.purchasesCount.toLocaleString()}</p>
                     </div>
                   </div>
                   
@@ -686,11 +831,21 @@ export default function Admin() {
             </section>
             <section className="bg-game-panel/40 border border-game-accent/20 rounded-xl p-4">
               <h2 className="text-lg font-semibold text-game-accent mb-2">אירועים נתמכים</h2>
-              <ul className="text-game-text-dim text-sm space-y-1 list-disc list-inside">
+              <ul className="text-game-text-dim text-sm space-y-1 list-disc list-inside columns-1 sm:columns-2">
                 <li><code className="bg-game-bg/60 px-1 rounded">page_view</code> – צפייה בדף</li>
                 <li><code className="bg-game-bg/60 px-1 rounded">game_start</code> – התחלת משחק</li>
                 <li><code className="bg-game-bg/60 px-1 rounded">wave_complete</code> – סיום גל</li>
                 <li><code className="bg-game-bg/60 px-1 rounded">game_over</code> – סיום משחק</li>
+                <li><code className="bg-game-bg/60 px-1 rounded">auth_blocked</code> – חסימת אימות</li>
+                <li><code className="bg-game-bg/60 px-1 rounded">story_start</code> – התחלת סיפור</li>
+                <li><code className="bg-game-bg/60 px-1 rounded">story_chapter_complete</code> – סיום פרק</li>
+                <li><code className="bg-game-bg/60 px-1 rounded">daily_reward_claim</code> – תביעת תגמול יומי</li>
+                <li><code className="bg-game-bg/60 px-1 rounded">tutorial_start</code> – התחלת הדרכה</li>
+                <li><code className="bg-game-bg/60 px-1 rounded">tutorial_complete</code> – סיום הדרכה</li>
+                <li><code className="bg-game-bg/60 px-1 rounded">tutorial_skip</code> – דילוג הדרכה</li>
+                <li><code className="bg-game-bg/60 px-1 rounded">saved_game_continue</code> – המשך משחק שמור</li>
+                <li><code className="bg-game-bg/60 px-1 rounded">resume_fail</code> – כשלון המשך</li>
+                <li><code className="bg-game-bg/60 px-1 rounded">shop_open</code> – פתיחת חנות</li>
                 <li><code className="bg-game-bg/60 px-1 rounded">purchase</code> – רכישה</li>
               </ul>
             </section>
