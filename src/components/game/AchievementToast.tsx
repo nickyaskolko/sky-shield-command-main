@@ -1,4 +1,5 @@
 // Achievement Toast - הודעת הישג חדש
+import { useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getAchievementById } from '@/lib/game/achievements';
 
@@ -9,7 +10,17 @@ interface AchievementToastProps {
 
 export function AchievementToast({ achievementId, onComplete }: AchievementToastProps) {
   const achievement = achievementId ? getAchievementById(achievementId) : null;
-  
+  const completeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (completeTimerRef.current) {
+        clearTimeout(completeTimerRef.current);
+        completeTimerRef.current = null;
+      }
+    };
+  }, []);
+
   return (
     <AnimatePresence>
       {achievement && (
@@ -19,13 +30,17 @@ export function AchievementToast({ achievementId, onComplete }: AchievementToast
           exit={{ opacity: 0, y: -20, scale: 0.95 }}
           transition={{ type: 'spring', stiffness: 400, damping: 28 }}
           onAnimationComplete={() => {
-            setTimeout(onComplete, 2000);
+            if (completeTimerRef.current) clearTimeout(completeTimerRef.current);
+            completeTimerRef.current = setTimeout(() => {
+              completeTimerRef.current = null;
+              onComplete();
+            }, 2000);
           }}
           className="fixed top-20 left-1/2 -translate-x-1/2 z-40 pointer-events-none max-w-[90vw]"
         >
           <div className="bg-gradient-to-r from-yellow-900/90 to-amber-800/90 
                           border border-yellow-500/50 rounded-xl px-3 py-2
-                          backdrop-blur-md shadow-xl shadow-black/30">
+                          backdrop-blur-md shadow-xl shadow-black/30 shadow-[0_0_24px_rgba(234,179,8,0.2)]">
             <div className="flex items-center gap-2">
               <span className="text-2xl">{achievement.icon}</span>
               <div className="text-right">

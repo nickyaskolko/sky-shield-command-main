@@ -64,160 +64,176 @@ export function useMultiplayer(): UseMultiplayerResult {
     const ch = channelRef.current;
     const currentRole = roleRef.current;
     const currentRoomId = roomIdRef.current;
-    if (ch) {
-      await supabase.removeChannel(ch);
-      channelRef.current = null;
-    }
+    channelRef.current = null;
     setRole(null);
     setRoomId(null);
     setRoomCode(null);
     setPresenceList([]);
     setError(null);
-    if (currentRole === 'host' && currentRoomId) {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase
-          .from('multiplayer_rooms')
-          .update({ status: 'ended', updated_at: new Date().toISOString() })
-          .eq('id', currentRoomId)
-          .eq('host_user_id', user.id);
+    try {
+      if (ch) await supabase.removeChannel(ch);
+      if (currentRole === 'host' && currentRoomId) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await supabase
+            .from('multiplayer_rooms')
+            .update({ status: 'ended', updated_at: new Date().toISOString() })
+            .eq('id', currentRoomId)
+            .eq('host_user_id', user.id);
+        }
       }
+    } catch {
+      // ensure UI state is cleared even if leave fails
     }
   }, []);
 
   const createRoom = useCallback(async (): Promise<{ roomId: string; roomCode: string } | null> => {
     setError(null);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setError('יש להתחבר כדי ליצור חדר');
-      return null;
-    }
-    const code = generateRoomCode();
-    const { data: row, error: insertError } = await supabase
-      .from('multiplayer_rooms')
-      .insert({
-        room_code: code,
-        host_user_id: user.id,
-        status: 'waiting',
-      })
-      .select('id')
-      .single();
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setError('יש להתחבר כדי ליצור חדר');
+        return null;
+      }
+      const code = generateRoomCode();
+      const { data: row, error: insertError } = await supabase
+        .from('multiplayer_rooms')
+        .insert({
+          room_code: code,
+          host_user_id: user.id,
+          status: 'waiting',
+        })
+        .select('id')
+        .single();
 
-    if (insertError || !row) {
-      setError(insertError?.message || 'יצירת חדר נכשלה');
-      return null;
-    }
+      if (insertError || !row) {
+        setError(insertError?.message || 'יצירת חדר נכשלה');
+        return null;
+      }
 
-    const rid = row.id as string;
-    const channelName = `${CHANNEL_PREFIX}${rid}`;
-    const channel = supabase.channel(channelName);
+      const rid = row.id as string;
+      const channelName = `${CHANNEL_PREFIX}${rid}`;
+      const channel = supabase.channel(channelName);
 
-    channel
-      .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState();
-        const list: MultiplayerPresence[] = [];
-        Object.entries(state).forEach(([, presences]) => {
-          (presences as { role: string; userId: string; displayName?: string }[]).forEach(p => {
-            list.push({
-              role: p.role as 'host' | 'guest',
-              userId: p.userId,
-              displayName: p.displayName,
+      channel
+        .on('presence', { event: 'sync' }, () => {
+          const state = channel.presenceState();
+          const list: MultiplayerPresence[] = [];
+          Object.entries(state).forEach(([, presences]) => {
+            (presences as { role: string; userId: string; displayName?: string }[]).forEach(p => {
+              list.push({
+                role: p.role as 'host' | 'guest',
+                userId: p.userId,
+                displayName: p.displayName,
+              });
             });
           });
+          setPresenceList(list);
+        })
+        .on('broadcast', { event: 'guest_action' }, ({ payload }) => {
+          guestActionListenersRef.current.forEach(cb => cb(payload as GuestAction));
+        })
+        .subscribe(async (status) => {
+          if (status === 'SUBSCRIBED') {
+            await channel.track({
+              role: 'host',
+              userId: user.id,
+              displayName: user.email ?? user.id.slice(0, 8),
+            });
+          }
         });
-        setPresenceList(list);
-      })
-      .on('broadcast', { event: 'guest_action' }, ({ payload }) => {
-        guestActionListenersRef.current.forEach(cb => cb(payload as GuestAction));
-      })
-      .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          await channel.track({
-            role: 'host',
-            userId: user.id,
-            displayName: user.email ?? user.id.slice(0, 8),
-          });
-        }
-      });
 
-    channelRef.current = channel;
-    setRole('host');
-    setRoomId(rid);
-    setRoomCode(code);
-    return { roomId: rid, roomCode: code };
+      channelRef.current = channel;
+      setRole('host');
+      setRoomId(rid);
+      setRoomCode(code);
+      return { roomId: rid, roomCode: code };
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'יצירת חדר נכשלה');
+      return null;
+    }
   }, []);
 
   const joinRoom = useCallback(async (code: string): Promise<{ roomId: string } | null> => {
     setError(null);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setError('יש להתחבר כדי להצטרף');
-      return null;
-    }
-    const { data: rid, error: rpcError } = await supabase.rpc('join_multiplayer_room', {
-      p_room_code: code.trim().toLowerCase(),
-    });
-
-    if (rpcError || rid == null) {
-      setError('לא נמצא חדר עם הקוד הזה או שהחדר מלא');
-      return null;
-    }
-
-    const roomIdStr = rid as string;
-    const channelName = `${CHANNEL_PREFIX}${roomIdStr}`;
-    const channel = supabase.channel(channelName);
-
-    channel
-      .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState();
-        const list: MultiplayerPresence[] = [];
-        Object.entries(state).forEach(([, presences]) => {
-          (presences as { role: string; userId: string; displayName?: string }[]).forEach(p => {
-            list.push({
-              role: p.role as 'host' | 'guest',
-              userId: p.userId,
-              displayName: p.displayName,
-            });
-          });
-        });
-        setPresenceList(list);
-      })
-      .on('presence', { event: 'leave' }, ({ leftPresences }) => {
-        const left = leftPresences as { role: string }[];
-        if (left.some(p => p.role === 'host')) {
-          hostLeftListenersRef.current.forEach(cb => cb());
-        }
-      })
-      .on('broadcast', { event: 'state' }, ({ payload }) => {
-        stateListenersRef.current.forEach(cb => cb(payload as GameStateSnapshot));
-      })
-      .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          await channel.track({
-            role: 'guest',
-            userId: user.id,
-            displayName: user.email ?? user.id.slice(0, 8),
-          });
-        }
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setError('יש להתחבר כדי להצטרף');
+        return null;
+      }
+      const { data: rid, error: rpcError } = await supabase.rpc('join_multiplayer_room', {
+        p_room_code: code.trim().toLowerCase(),
       });
 
-    channelRef.current = channel;
-    setRole('guest');
-    setRoomId(roomIdStr);
-    setRoomCode(code.trim().toLowerCase());
-    return { roomId: roomIdStr };
+      if (rpcError || rid == null) {
+        setError('לא נמצא חדר עם הקוד הזה או שהחדר מלא');
+        return null;
+      }
+
+      const roomIdStr = rid as string;
+      const channelName = `${CHANNEL_PREFIX}${roomIdStr}`;
+      const channel = supabase.channel(channelName);
+
+      channel
+        .on('presence', { event: 'sync' }, () => {
+          const state = channel.presenceState();
+          const list: MultiplayerPresence[] = [];
+          Object.entries(state).forEach(([, presences]) => {
+            (presences as { role: string; userId: string; displayName?: string }[]).forEach(p => {
+              list.push({
+                role: p.role as 'host' | 'guest',
+                userId: p.userId,
+                displayName: p.displayName,
+              });
+            });
+          });
+          setPresenceList(list);
+        })
+        .on('presence', { event: 'leave' }, ({ leftPresences }) => {
+          const left = leftPresences as { role: string }[];
+          if (left.some(p => p.role === 'host')) {
+            hostLeftListenersRef.current.forEach(cb => cb());
+          }
+        })
+        .on('broadcast', { event: 'state' }, ({ payload }) => {
+          stateListenersRef.current.forEach(cb => cb(payload as GameStateSnapshot));
+        })
+        .subscribe(async (status) => {
+          if (status === 'SUBSCRIBED') {
+            await channel.track({
+              role: 'guest',
+              userId: user.id,
+              displayName: user.email ?? user.id.slice(0, 8),
+            });
+          }
+        });
+
+      channelRef.current = channel;
+      setRole('guest');
+      setRoomId(roomIdStr);
+      setRoomCode(code.trim().toLowerCase());
+      return { roomId: roomIdStr };
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'הצטרפות נכשלה');
+      return null;
+    }
   }, []);
 
   const setRoomPlaying = useCallback(async () => {
     const rid = roomIdRef.current;
     if (!rid) return;
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    await supabase
-      .from('multiplayer_rooms')
-      .update({ status: 'playing', updated_at: new Date().toISOString() })
-      .eq('id', rid)
-      .eq('host_user_id', user.id);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      await supabase
+        .from('multiplayer_rooms')
+        .update({ status: 'playing', updated_at: new Date().toISOString() })
+        .eq('id', rid)
+        .eq('host_user_id', user.id);
+    } catch {
+      setError('שגיאה בעדכון סטטוס החדר');
+    }
   }, []);
 
   const sendState = useCallback((snapshot: GameStateSnapshot) => {

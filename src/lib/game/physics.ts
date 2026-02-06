@@ -125,7 +125,7 @@ export function updateProjectilePosition(projectile: Projectile): boolean {
   const dy = projectile.targetY - projectile.y;
   const distSq = dx * dx + dy * dy;
   const dist = Math.sqrt(distSq);
-  if (dist < projectile.speed || distSq < 1) {
+  if (dist <= 0 || dist < projectile.speed || distSq < 1) {
     projectile.x = projectile.targetX;
     projectile.y = projectile.targetY;
     return true;

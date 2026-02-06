@@ -41,6 +41,7 @@ import { getStoryWaveConfig } from '@/lib/game/storyMode';
 import { getWaveHint } from '@/lib/game/waveHints';
 import { PREPARATION_DURATION_MS } from '@/lib/constants';
 import { usePlayerStore } from '@/store/playerStore';
+import { useUserRole } from '@/hooks/useUserRole';
 import { soundManager } from '@/lib/audio/SoundManager';
 import { supabase } from '@/lib/supabase';
 import { checkAchievements } from '@/lib/game/achievements';
@@ -242,13 +243,17 @@ export function GameWithLeaflet() {
     return unsub;
   }, [multiplayerRole, onHostLeft, setPhase, addNotification, multiplayer]);
 
-  // Host: broadcast state to guest (throttled)
+  // Host: broadcast state to guest (throttled) – guard against snapshot throwing
   useEffect(() => {
     if (multiplayerRole !== 'host' || !isGuestConnected) return;
     const interval = setInterval(() => {
-      const state = useGameStore.getState();
-      if (state.phase === 'playing' || state.phase === 'preparation' || state.phase === 'waveComplete' || state.phase === 'shop' || state.phase === 'gameOver') {
-        sendState(state.getSerializableStateSnapshot());
+      try {
+        const state = useGameStore.getState();
+        if (state.phase === 'playing' || state.phase === 'preparation' || state.phase === 'waveComplete' || state.phase === 'shop' || state.phase === 'gameOver') {
+          sendState(state.getSerializableStateSnapshot());
+        }
+      } catch {
+        // ignore serialization/state errors so interval keeps running
       }
     }, 80);
     return () => clearInterval(interval);
@@ -336,20 +341,14 @@ export function GameWithLeaflet() {
   const firstGameInstructionsShown = usePlayerStore(state => state.settings?.firstGameInstructionsShown ?? false);
   const setFirstGameInstructionsShown = usePlayerStore(state => state.setFirstGameInstructionsShown);
   
-  // Apply saved settings (theme, volume) on mount
-  const settings = usePlayerStore(state => state.settings ?? { volume: 0.5, language: 'he', theme: 'dark', highContrast: false, fontSize: 'normal', reduceMotion: false });
+  // Volume and design-theme are applied globally (ApplyAppSettings). Sync donor_tier -> designTheme so tier is visible without opening settings.
+  const settings = usePlayerStore(state => state.settings ?? { volume: 0.5, language: 'he', theme: 'dark', highContrast: false, fontSize: 'normal', reduceMotion: false, designTheme: '1' });
+  const setDesignTheme = usePlayerStore(state => state.setDesignTheme);
+  const { donorTier, loading: roleLoading } = useUserRole();
   useEffect(() => {
     soundManager.setVolume(settings.volume);
-    const root = document.documentElement;
-    if (settings.theme === 'light') root.classList.add('theme-light');
-    else root.classList.remove('theme-light');
-    if (settings.highContrast) root.classList.add('accessibility-high-contrast');
-    else root.classList.remove('accessibility-high-contrast');
-    if (settings.fontSize === 'large') root.classList.add('accessibility-large-text');
-    else root.classList.remove('accessibility-large-text');
-    if (settings.reduceMotion) root.classList.add('accessibility-reduce-motion');
-    else root.classList.remove('accessibility-reduce-motion');
-  }, [settings.volume, settings.theme, settings.highContrast, settings.fontSize, settings.reduceMotion]);
+  }, [settings.volume]);
+  // כל המנויים יכולים לבחור ציאן (עיצוב 1) – אין דריסה אוטומטית לפי דרגה
   
   // Random event state
   const activeEvent = useGameStore(state => state.activeEvent);
@@ -1313,14 +1312,14 @@ export function GameWithLeaflet() {
         }}
       />
       
-      {/* Exit & Save + Settings + Heat map – compact on mobile */}
+      {/* Exit & Save + Settings + Heat map – פינה שמאלית עליונה; במובייל כפתורים נוחים למגע */}
       {phase !== 'menu' && (
-        <div className="absolute top-1 sm:top-4 left-1 sm:left-4 z-20 flex items-center gap-1 sm:gap-2 pointer-events-auto">
+        <div className="absolute top-1.5 left-1.5 sm:top-4 sm:left-4 z-20 flex items-center gap-1 sm:gap-2 pointer-events-auto safe-area-inset-left" dir="rtl" style={{ paddingLeft: 'env(safe-area-inset-left, 0.25rem)' }}>
           {(phase === 'playing' || phase === 'preparation') && (
             <button
               type="button"
               onClick={() => setShowHeatMap(v => !v)}
-              className={showHeatMap ? 'p-1.5 sm:p-2 rounded-md sm:rounded-lg bg-amber-600/80 border border-amber-400 text-white text-[10px] sm:text-sm transition-all duration-200 active:scale-95' : 'p-1.5 sm:p-2 rounded-md sm:rounded-lg bg-game-panel/90 border border-game-accent/30 text-game-accent hover:bg-game-accent/20 active:scale-95 transition-all duration-200 text-[10px] sm:text-sm'}
+              className={showHeatMap ? 'p-2 sm:p-2 rounded-md sm:rounded-lg bg-amber-600/80 border border-amber-400 text-white text-[10px] sm:text-sm transition-all duration-200 active:scale-95 min-h-[44px] min-w-[44px] sm:min-w-0 flex items-center justify-center' : 'p-2 sm:p-2 rounded-md sm:rounded-lg bg-game-panel/90 border border-game-accent/30 text-game-accent hover:bg-game-accent/20 active:scale-95 transition-all duration-200 text-[10px] sm:text-sm min-h-[44px] min-w-[44px] sm:min-w-0 flex items-center justify-center'}
               aria-label="מפת חום"
               title="מפת חום"
             >
@@ -1331,7 +1330,7 @@ export function GameWithLeaflet() {
             <button
               type="button"
               onClick={() => useGameStore.getState().saveGameAndExit()}
-              className="flex items-center gap-1 px-2 py-1.5 sm:px-2.5 sm:py-2 rounded-md sm:rounded-lg bg-game-panel/90 border border-amber-500/40 text-amber-300 hover:bg-amber-500/20 active:scale-95 transition-all duration-200 text-[10px] sm:text-sm min-h-[36px] sm:min-h-[40px]"
+              className="flex items-center gap-1 px-2 py-2 sm:px-2.5 sm:py-2 rounded-md sm:rounded-lg bg-game-panel/90 border border-amber-500/40 text-amber-300 hover:bg-amber-500/20 active:scale-95 transition-all duration-200 text-[10px] sm:text-sm min-h-[44px] sm:min-h-[40px]"
               aria-label="יציאה ושמירה"
               title="יציאה ושמירה"
             >
@@ -1342,7 +1341,7 @@ export function GameWithLeaflet() {
           <button
             type="button"
             onClick={() => setShowSettings(true)}
-            className="p-1.5 sm:p-2 rounded-md sm:rounded-lg bg-game-panel/90 border border-game-accent/30 text-game-accent hover:bg-game-accent/20 active:scale-95 transition-all duration-200 min-h-[36px] sm:min-h-[40px] flex items-center justify-center"
+            className="p-2 sm:p-2 rounded-md sm:rounded-lg bg-game-panel/90 border border-game-accent/30 text-game-accent hover:bg-game-accent/20 active:scale-95 transition-all duration-200 min-h-[44px] min-w-[44px] sm:min-h-[40px] sm:min-w-0 flex items-center justify-center"
             aria-label="הגדרות"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 sm:w-5 sm:h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -1379,9 +1378,9 @@ export function GameWithLeaflet() {
       {/* Buffs from main menu shop – player chooses when to activate */}
       {phase === 'playing' && <BuffsPanel />}
       
-      {/* Preparation phase – compact on mobile */}
+      {/* Preparation phase – במובייל מתחת ל-HUD המרכזי כדי לא לחפוף */}
       {phase === 'preparation' && (
-        <div className="absolute top-10 sm:top-4 left-1 right-1 sm:left-4 sm:right-auto z-30 flex flex-col gap-1.5 sm:gap-2 p-2 sm:p-4 bg-game-panel/95 backdrop-blur-sm border border-game-accent/30 rounded-lg sm:rounded-xl shadow-xl max-w-[calc(100vw-0.5rem)] sm:max-w-xs" dir="rtl">
+        <div className="absolute top-36 left-1 right-1 sm:top-24 sm:left-4 sm:right-auto z-30 flex flex-col gap-1.5 sm:gap-2 p-2 sm:p-4 bg-game-panel/95 backdrop-blur-sm border border-game-accent/30 rounded-lg sm:rounded-xl shadow-xl max-w-[calc(100vw-0.5rem)] sm:max-w-xs safe-area-inset-left" dir="rtl" style={{ marginLeft: 'env(safe-area-inset-left, 0)', marginRight: 'env(safe-area-inset-right, 0)' }}>
           <h2 className="text-sm sm:text-lg font-bold text-game-accent">גל {wave} – הכנה</h2>
           <p className="text-game-text text-[10px] sm:text-sm">
             הצב רדארים וסוללות. לחץ &quot;התחל&quot; או חכה לספירה.
@@ -1493,9 +1492,9 @@ export function GameWithLeaflet() {
         onPlayAgain={startGame}
       />
       
-      {/* Placement instruction - moved to side, responsive */}
+      {/* Placement instruction – מתחת לכפתורי ימין (יציאה/הגדרות) */}
       {(placingBatteryType || placingRadarType) && (
-        <div className="absolute top-20 right-2 sm:top-24 sm:right-4 z-[1000] animate-fade-in-up">
+        <div className="absolute top-24 sm:top-28 right-2 sm:right-4 z-[1000] animate-fade-in-up">
           <div className="bg-game-panel/95 backdrop-blur-sm text-game-text px-3 py-2 sm:px-4 rounded-xl shadow-xl border border-amber-400/50 max-w-[240px]">
             <p className="text-sm font-medium text-amber-200">
               {placingBatteryType ? '🎯 הצבת סוללה' : '📡 הצבת רדאר'}

@@ -1,6 +1,6 @@
 // Daily Reward Modal – פרס יומי
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -23,11 +23,21 @@ const REWARDS = [1, 2, 2, 3, 3, 4, 5] as const;
 
 export function DailyRewardModal({ isOpen, onClose }: DailyRewardModalProps) {
   const [claimedToday, setClaimedToday] = useState(false);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const canClaim = usePlayerStore((s) => s.canClaimDailyReward());
   const claimDailyReward = usePlayerStore((s) => s.claimDailyReward);
   const dailyRewardLastClaimed = usePlayerStore((s) => s.dailyRewardLastClaimed);
   const dailyRewardStreak = usePlayerStore((s) => s.dailyRewardStreak);
   const diamonds = usePlayerStore((s) => s.diamonds);
+
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) {
+        clearTimeout(closeTimerRef.current);
+        closeTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const rewards = (getGameConfig().DAILY_REWARD_DIAMONDS ?? REWARDS) as number[];
   const yesterday = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
@@ -40,7 +50,11 @@ export function DailyRewardModal({ isOpen, onClose }: DailyRewardModalProps) {
     if (result.claimed && result.reward) {
       analytics.dailyRewardClaim(result.reward.day, result.reward.diamonds);
       setClaimedToday(true);
-      setTimeout(() => onClose(), 1500);
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = setTimeout(() => {
+        closeTimerRef.current = null;
+        onClose();
+      }, 1500);
     }
   };
 

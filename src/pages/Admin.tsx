@@ -26,6 +26,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Shield, Users, Trophy, ArrowRight, Loader2, Plus, Trash2, Pencil, Calendar, Zap, UserX, BarChart3, Globe, Smartphone, BookOpen, Sparkles, ShoppingCart, CirclePlay, Activity } from 'lucide-react';
 import { usePlayerStore } from '@/store/playerStore';
+import { t } from '@/lib/i18n/he';
 
 const CHALLENGE_TYPES = ['intercept_any', 'perfect_wave', 'combo', 'waves_completed'] as const;
 const ORIGIN_KEYS = ['gaza', 'lebanon', 'syria', 'iran', 'yemen', 'iraq'] as const;
@@ -51,7 +52,7 @@ type ChallengeRow = { id: string; type: string; title: string; description: stri
 type ChapterRow = { id: string; title: string; narrative_text: string; origin_key: string | null; starting_budget: number | null; waves: unknown; sort_order: number | null };
 type ConfigRow = { key: string; value: unknown };
 type OverrideRow = { date_key: string; challenges: unknown };
-type ProfileRow = { id: string; display_name: string | null; stats: unknown; created_at: string; diamonds?: number; banned?: boolean; banned_reason?: string | null; banned_at?: string | null; banned_by?: string | null };
+type ProfileRow = { id: string; display_name: string | null; stats: unknown; created_at: string; diamonds?: number; banned?: boolean; banned_reason?: string | null; banned_at?: string | null; banned_by?: string | null; donor_tier?: number | null };
 type BlockLogRow = { id: string; target_user_id: string; action: 'block' | 'unblock'; reason: string | null; admin_user_id: string | null; created_at: string };
 
 const BLOCK_REASONS = [
@@ -209,6 +210,7 @@ export default function Admin() {
           banned_reason: r.banned_reason as string | null,
           banned_at: r.banned_at as string | null,
           banned_by: r.banned_by as string | null,
+          donor_tier: typeof r.donor_tier === 'number' && r.donor_tier >= 1 && r.donor_tier <= 3 ? r.donor_tier : null,
         })));
       }
     } catch (e) {
@@ -363,11 +365,16 @@ export default function Admin() {
   };
   const grantDonorDiamonds = async (userId: string) => {
     setGrantingDonorId(userId);
-    const { data: row } = await supabase.from('profiles').select('diamonds').eq('id', userId).single();
-    const current = row?.diamonds ?? 0;
-    const { error } = await supabase.from('profiles').update({ diamonds: current + 2000 }).eq('id', userId);
-    if (!error) await loadProfiles();
-    setGrantingDonorId(null);
+    try {
+      const { data: row } = await supabase.from('profiles').select('diamonds, donor_tier').eq('id', userId).single();
+      const current = row?.diamonds ?? 0;
+      const existingTier = (row as { donor_tier?: number } | null)?.donor_tier;
+      const donorTier = existingTier >= 1 && existingTier <= 3 ? existingTier : 1;
+      const { error } = await supabase.from('profiles').update({ diamonds: current + 2000, donor_tier: donorTier }).eq('id', userId);
+      if (!error) await loadProfiles();
+    } finally {
+      setGrantingDonorId(null);
+    }
   };
 
   useEffect(() => {
@@ -883,8 +890,29 @@ export default function Admin() {
                         <span className="text-game-text-dim text-xs">ציון: {(p.stats as { highestScore?: number }).highestScore ?? 0}</span>
                       )}
                       <span className="text-amber-300 text-xs font-mono">◆{p.diamonds ?? 0}</span>
+                      {typeof p.donor_tier === 'number' && p.donor_tier >= 1 && (
+                        <span className="text-cyan-300 text-xs" title="דרגת תורם – עיצוב זמין">
+                          {p.donor_tier === 1 ? t('donorTier1') : p.donor_tier === 2 ? t('donorTier2') : t('donorTier3')}
+                        </span>
+                      )}
                     </div>
-                    <div className="flex gap-2 flex-wrap">
+                    <div className="flex gap-2 flex-wrap items-center">
+                      <select
+                        value={p.donor_tier ?? ''}
+                        onChange={async (e) => {
+                          const v = e.target.value;
+                          const tier = v === '' ? null : Math.min(3, Math.max(1, parseInt(v, 10)));
+                          const { error } = await supabase.from('profiles').update({ donor_tier: tier }).eq('id', p.id);
+                          if (!error) await loadProfiles();
+                        }}
+                        className="bg-game-bg/80 border border-game-accent/30 rounded px-2 py-1 text-xs text-game-text"
+                        title="דרגת תורם – משפיעה על עיצובים זמינים"
+                      >
+                        <option value="">ללא</option>
+                        <option value="1">{t('donorTier1')}</option>
+                        <option value="2">{t('donorTier2')}</option>
+                        <option value="3">{t('donorTier3')}</option>
+                      </select>
                       <Button
                         size="sm"
                         variant="outline"

@@ -33,7 +33,7 @@ export function GameOverModal({
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent 
-        className="bg-game-panel/95 backdrop-blur-md border-game-danger/50 text-game-text max-w-md shadow-2xl shadow-black/40"
+        className="bg-game-panel/95 backdrop-blur-md border-game-danger/50 text-game-text max-w-md shadow-2xl shadow-black/40 rounded-xl game-panel-elevated"
         dir="rtl"
       >
         <DialogHeader>
@@ -62,8 +62,8 @@ export function GameOverModal({
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 }}
-            className="flex items-center justify-between p-4 bg-game-accent/10 rounded-lg"
+            transition={{ delay: 0.1, type: 'spring', stiffness: 400, damping: 30 }}
+            className="flex items-center justify-between p-4 bg-game-accent/10 rounded-lg border border-game-accent/20"
           >
             <div className="flex items-center gap-3">
               <Trophy className="h-6 w-6 text-game-accent" />
@@ -78,8 +78,8 @@ export function GameOverModal({
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
-            className="flex items-center justify-between p-4 bg-purple-500/10 rounded-lg"
+            transition={{ delay: 0.2, type: 'spring', stiffness: 400, damping: 30 }}
+            className="flex items-center justify-between p-4 bg-purple-500/10 rounded-lg border border-purple-500/20"
           >
             <div className="flex items-center gap-3">
               <Waves className="h-6 w-6 text-purple-400" />
@@ -92,8 +92,8 @@ export function GameOverModal({
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 }}
-            className="flex items-center justify-between p-4 bg-green-500/10 rounded-lg"
+            transition={{ delay: 0.3, type: 'spring', stiffness: 400, damping: 30 }}
+            className="flex items-center justify-between p-4 bg-green-500/10 rounded-lg border border-green-500/20"
           >
             <div className="flex items-center gap-3">
               <Target className="h-6 w-6 text-green-400" />
@@ -107,7 +107,7 @@ export function GameOverModal({
           <Button
             onClick={onPlayAgain}
             size="lg"
-            className="w-full bg-game-accent hover:bg-game-accent/80 text-game-panel font-bold"
+            className="w-full bg-game-accent hover:bg-game-accent/80 hover:shadow-[0_0_20px_hsl(var(--game-accent-glow)/0.4)] text-game-panel font-bold transition-all duration-200"
           >
             <RotateCcw className="h-5 w-5 ml-2" />
             {t('playAgain')}

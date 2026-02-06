@@ -27,17 +27,17 @@ export function WaveCompleteModal({
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent 
-        className="bg-game-panel/95 backdrop-blur-md border-green-500/50 text-game-text max-w-sm shadow-2xl shadow-black/40"
+        className="bg-game-panel/95 backdrop-blur-md border-green-500/50 text-game-text max-w-sm shadow-2xl shadow-black/40 rounded-xl game-panel-elevated"
         dir="rtl"
       >
         <DialogHeader>
           <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: 'spring' }}
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
             className="flex justify-center mb-4"
           >
-            <div className="p-4 bg-green-500/20 rounded-full">
+            <div className="p-4 bg-green-500/20 rounded-full border border-green-500/30 shadow-lg shadow-green-500/20">
               <CheckCircle className="h-12 w-12 text-green-400" />
             </div>
           </motion.div>
@@ -53,7 +53,7 @@ export function WaveCompleteModal({
           <Button
             onClick={onOpenShop}
             size="lg"
-            className="w-full bg-purple-600 hover:bg-purple-500 font-bold"
+            className="w-full bg-purple-600 hover:bg-purple-500 hover:shadow-[0_0_16px_rgba(147,51,234,0.4)] font-bold transition-all duration-200"
           >
             <ShoppingBag className="h-5 w-5 ml-2" />
             {t('shopTitle')}
@@ -63,7 +63,7 @@ export function WaveCompleteModal({
             onClick={onNextWave}
             size="lg"
             variant="outline"
-            className="w-full border-game-accent text-game-accent hover:bg-game-accent/10 font-bold"
+            className="w-full border-game-accent text-game-accent hover:bg-game-accent/10 hover:shadow-[0_0_12px_hsl(var(--game-accent-glow)/0.25)] font-bold transition-all duration-200"
           >
             {t('nextWave')} →
           </Button>

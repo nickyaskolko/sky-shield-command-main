@@ -38,8 +38,8 @@ function HUDInner({ budget, diamonds = 0, wave, score, morale, isEndless, notifi
   
   return (
     <div className="absolute inset-0 pointer-events-none z-10" dir="rtl">
-      {/* Left: Morale – compact on mobile */}
-      <div className="hud-morale absolute top-1.5 left-1.5 sm:top-4 sm:left-4 md:left-20 lg:left-40 flex items-center gap-1.5 sm:gap-3 bg-game-panel/90 backdrop-blur-sm rounded-md sm:rounded-lg px-2 py-1.5 sm:px-4 sm:py-2 border border-game-accent/30 min-w-[70px] sm:min-w-[180px] shadow-lg shadow-black/20">
+      {/* Morale (HP) – במובייל: מתחת לכפתורים; במסך גדול: מימין לכפתורים */}
+      <div className="hud-morale absolute top-11 left-1.5 right-1.5 sm:top-4 sm:left-[14rem] sm:right-auto md:left-[16rem] flex items-center gap-1.5 sm:gap-3 bg-game-panel/90 backdrop-blur-sm rounded-md sm:rounded-lg px-2 py-1.5 sm:px-4 sm:py-2 border border-game-accent/30 min-w-0 sm:min-w-[180px] max-w-[calc(100vw-1rem)] sm:max-w-none shadow-lg shadow-black/20 game-panel-elevated transition-shadow duration-200">
         <span className="text-game-text-dim text-[10px] sm:text-sm shrink-0">{t('morale')}</span>
         <div className="flex-1 min-w-0">
           <motion.div
@@ -73,8 +73,8 @@ function HUDInner({ budget, diamonds = 0, wave, score, morale, isEndless, notifi
         </span>
       </div>
 
-      {/* Center: Budget + Ammo + Wave – compact on mobile, flex-wrap */}
-      <div className="hud-center absolute top-1.5 left-1/2 -translate-x-1/2 flex flex-wrap items-center justify-center gap-1.5 sm:gap-3 max-w-[98vw] sm:max-w-[95vw] pointer-events-none sm:top-4">
+      {/* Center: Budget + Ammo + Wave – במובייל מתחת ל-HP כדי לא לחפוף */}
+      <div className="hud-center absolute top-20 left-1/2 -translate-x-1/2 flex flex-wrap items-center justify-center gap-1.5 sm:gap-3 max-w-[98vw] sm:max-w-[95vw] pointer-events-none sm:top-4 px-1 sm:px-0">
         {fullCoverageRemaining > 0 && (
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -85,7 +85,7 @@ function HUDInner({ budget, diamonds = 0, wave, score, morale, isEndless, notifi
           </motion.div>
         )}
         <motion.div 
-          className="flex items-center gap-1 sm:gap-2 bg-game-panel/90 backdrop-blur-sm rounded-md sm:rounded-lg px-2 py-1 sm:px-4 sm:py-2 border border-game-accent/30 shrink-0 shadow-lg shadow-black/20"
+          className="flex items-center gap-1 sm:gap-2 bg-game-panel/90 backdrop-blur-sm rounded-md sm:rounded-lg px-2 py-1 sm:px-4 sm:py-2 border border-game-accent/30 shrink-0 shadow-lg shadow-black/20 game-panel-elevated"
           animate={{ 
             borderColor: budget < 100 ? 'hsl(0, 70%, 50%)' : 'hsla(185, 100%, 50%, 0.3)' 
           }}
@@ -101,37 +101,37 @@ function HUDInner({ budget, diamonds = 0, wave, score, morale, isEndless, notifi
             {budget.toLocaleString()}
           </motion.span>
         </motion.div>
-        <div className="flex items-center gap-1 sm:gap-2 bg-game-panel/90 backdrop-blur-sm rounded-md sm:rounded-lg px-2 py-1 sm:px-3 sm:py-2 border border-amber-500/30 shrink-0 shadow-lg shadow-black/20">
+        <div className="flex items-center gap-1 sm:gap-2 bg-game-panel/90 backdrop-blur-sm rounded-md sm:rounded-lg px-2 py-1 sm:px-3 sm:py-2 border border-amber-500/30 shrink-0 shadow-lg shadow-black/20 game-panel-elevated">
           <span className="text-amber-300 font-bold text-sm sm:text-lg">◆</span>
           <span className="text-game-text font-mono text-sm sm:text-lg">{diamonds}</span>
         </div>
-        <div className="hud-ammo-panel flex flex-col gap-1 bg-game-panel/90 backdrop-blur-sm rounded-md sm:rounded-lg px-2 py-1.5 sm:px-3 sm:py-2 border border-game-accent/30 pointer-events-auto shadow-lg shadow-black/20 max-h-[120px] sm:max-h-none overflow-y-auto" dir="rtl">
+        <div className="hud-ammo-panel flex flex-col gap-1 bg-game-panel/90 backdrop-blur-sm rounded-md sm:rounded-lg px-2 py-1.5 sm:px-3 sm:py-2 border border-game-accent/30 pointer-events-auto shadow-lg shadow-black/20 game-panel-elevated max-h-[120px] sm:max-h-none overflow-y-auto" dir="rtl">
           <span className="text-game-text-dim text-[10px] sm:text-xs font-medium">מלאי</span>
           <div className="flex flex-col gap-0.5 sm:gap-1.5 text-[10px] sm:text-sm">
             <div className="flex items-center justify-between gap-1 sm:gap-2">
               <span className="text-game-accent shrink-0 truncate max-w-[60px] sm:max-w-none">כיפ״ב <span className="text-game-text-dim">₪{costIron}</span></span>
               <span className="font-mono text-game-text w-5 text-left">{ammoIronDome}</span>
               {onBuyAmmo && (
-                <button type="button" onClick={() => onBuyAmmo('shortRange')} disabled={budget < costIron} className="touch-target text-[10px] sm:text-xs px-2 py-1 sm:px-3 sm:py-2 min-h-[36px] sm:min-h-[44px] rounded bg-game-accent/20 text-game-accent hover:bg-game-accent/30 active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed shrink-0">קנה</button>
+                <button type="button" onClick={() => onBuyAmmo('shortRange')} disabled={budget < costIron} className="touch-target text-[10px] sm:text-xs px-2 py-1 sm:px-3 sm:py-2 min-h-[36px] sm:min-h-[44px] rounded bg-game-accent/20 text-game-accent hover:bg-game-accent/30 hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shrink-0">קנה</button>
               )}
             </div>
             <div className="flex items-center justify-between gap-1 sm:gap-2">
               <span className="text-orange-400 shrink-0 truncate max-w-[60px] sm:max-w-none">פטריוט <span className="text-game-text-dim">₪{costPatriot}</span></span>
               <span className="font-mono text-game-text w-5 text-left">{ammoPatriot}</span>
               {onBuyAmmo && (
-                <button type="button" onClick={() => onBuyAmmo('mediumRange')} disabled={budget < costPatriot} className="touch-target text-[10px] sm:text-xs px-2 py-1 sm:px-3 sm:py-2 min-h-[36px] sm:min-h-[44px] rounded bg-orange-500/20 text-orange-300 hover:bg-orange-500/30 active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed shrink-0">קנה</button>
+                <button type="button" onClick={() => onBuyAmmo('mediumRange')} disabled={budget < costPatriot} className="touch-target text-[10px] sm:text-xs px-2 py-1 sm:px-3 sm:py-2 min-h-[36px] sm:min-h-[44px] rounded bg-orange-500/20 text-orange-300 hover:bg-orange-500/30 hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shrink-0">קנה</button>
               )}
             </div>
             <div className="flex items-center justify-between gap-1 sm:gap-2">
               <span className="text-purple-400 shrink-0 truncate max-w-[60px] sm:max-w-none">חץ 3 <span className="text-game-text-dim">₪{costArrow}</span></span>
               <span className="font-mono text-game-text w-5 text-left">{ammoArrow3}</span>
               {onBuyAmmo && (
-                <button type="button" onClick={() => onBuyAmmo('longRange')} disabled={budget < costArrow} className="touch-target text-[10px] sm:text-xs px-2 py-1 sm:px-3 sm:py-2 min-h-[36px] sm:min-h-[44px] rounded bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed shrink-0">קנה</button>
+                <button type="button" onClick={() => onBuyAmmo('longRange')} disabled={budget < costArrow} className="touch-target text-[10px] sm:text-xs px-2 py-1 sm:px-3 sm:py-2 min-h-[36px] sm:min-h-[44px] rounded bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 hover:scale-105 active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 shrink-0">קנה</button>
               )}
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-1 sm:gap-2 bg-game-panel/90 backdrop-blur-sm rounded-md sm:rounded-lg px-2 py-1 sm:px-4 sm:py-2 border border-game-accent/30 shrink-0 shadow-lg shadow-black/20">
+        <div className="flex items-center gap-1 sm:gap-2 bg-game-panel/90 backdrop-blur-sm rounded-md sm:rounded-lg px-2 py-1 sm:px-4 sm:py-2 border border-game-accent/30 shrink-0 shadow-lg shadow-black/20 game-panel-elevated">
           <span className="text-game-text-dim text-[10px] sm:text-sm">{t('wave')}</span>
           <span className="text-game-accent font-bold text-base sm:text-xl">
             {wave}
@@ -140,8 +140,8 @@ function HUDInner({ budget, diamonds = 0, wave, score, morale, isEndless, notifi
         </div>
       </div>
 
-      {/* Right top: Score, combo – compact on mobile */}
-      <div className="absolute top-1.5 right-1.5 sm:top-4 sm:right-4 flex items-center gap-1.5 sm:gap-3 bg-game-panel/90 backdrop-blur-sm rounded-md sm:rounded-lg px-2 py-1.5 sm:px-4 sm:py-2 border border-game-accent/30 shadow-lg shadow-black/20">
+      {/* Right top: Score, combo – במובייל עם ריווח ל-safe area */}
+      <div className="absolute top-1.5 right-1.5 sm:top-4 sm:right-4 flex items-center gap-1.5 sm:gap-3 bg-game-panel/90 backdrop-blur-sm rounded-md sm:rounded-lg px-2 py-1.5 sm:px-4 sm:py-2 border border-game-accent/30 shadow-lg shadow-black/20 game-panel-elevated" style={{ marginRight: 'env(safe-area-inset-right)' }}>
         <div className="flex items-center gap-1 sm:gap-2">
           <span className="text-game-text-dim text-[10px] sm:text-sm">{t('score')}</span>
           <span className="text-game-text font-mono text-sm sm:text-lg">{score.toLocaleString()}</span>
@@ -166,8 +166,8 @@ function HUDInner({ budget, diamonds = 0, wave, score, morale, isEndless, notifi
         )}
       </div>
       
-      {/* Notifications – left middle, compact */}
-      <div className="fixed left-1 sm:left-4 top-1/2 -translate-y-1/2 z-20 flex flex-col items-start gap-1 sm:gap-2 max-h-[35vh] sm:max-h-[50vh] overflow-y-auto overflow-x-hidden py-1 px-1 sm:px-2 min-w-0">
+      {/* Notifications – במובייל מתחת ל-HUD המרכזי */}
+      <div className="fixed left-1 sm:left-4 top-[7.5rem] sm:top-24 z-20 flex flex-col items-start gap-1 sm:gap-2 max-h-[25vh] sm:max-h-[40vh] overflow-y-auto overflow-x-hidden py-1 px-1 sm:px-2 min-w-0">
         <AnimatePresence>
           {notifications
             .filter(n => (n.duration ?? 3000) > 0 && Date.now() - n.timestamp < (n.duration ?? 3000))

@@ -12,7 +12,7 @@ interface AuthContextValue {
   /** Set when user was signed out because profile.banned – show "חשבונך חסום" */
   blockedMessage: string | null;
   signIn: (email: string, password: string) => Promise<{ error: { message: string } | null }>;
-  signUp: (email: string, password: string) => Promise<{ error: { message: string } | null }>;
+  signUp: (email: string, password: string, displayName?: string) => Promise<{ error: { message: string } | null }>;
   signOut: () => Promise<void>;
   signInWithOtp: (email: string) => Promise<{ error: { message: string } | null }>;
 }
@@ -74,22 +74,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loading, user?.id]);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error ? { message: error.message } : null };
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      return { error: error ? { message: error.message } : null };
+    } catch (e) {
+      return { error: { message: e instanceof Error ? e.message : 'שגיאה בהתחברות' } };
+    }
   };
 
-  const signUp = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({ email, password });
-    return { error: error ? { message: error.message } : null };
+  const signUp = async (email: string, password: string, displayName?: string) => {
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { display_name: displayName?.trim() || undefined } },
+      });
+      return { error: error ? { message: error.message } : null };
+    } catch (e) {
+      return { error: { message: e instanceof Error ? e.message : 'שגיאה בהרשמה' } };
+    }
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      setSession(null);
+      setUser(null);
+    }
   };
 
   const signInWithOtp = async (email: string) => {
-    const { error } = await supabase.auth.signInWithOtp({ email });
-    return { error: error ? { message: error.message } : null };
+    try {
+      const { error } = await supabase.auth.signInWithOtp({ email });
+      return { error: error ? { message: error.message } : null };
+    } catch (e) {
+      return { error: { message: e instanceof Error ? e.message : 'שגיאה בשליחת קישור' } };
+    }
   };
 
   return (

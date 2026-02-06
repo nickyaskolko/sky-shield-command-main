@@ -40,7 +40,7 @@ export function EventNotification({ event, onComplete }: EventNotificationProps)
         >
           <div className="bg-gradient-to-br from-purple-900/95 to-indigo-900/95 
                           border border-purple-400/50 rounded-xl px-3 py-2
-                          backdrop-blur-md shadow-xl shadow-black/30 min-w-[200px]">
+                          backdrop-blur-md shadow-xl shadow-black/30 shadow-[0_0_24px_rgba(168,85,247,0.2)] min-w-[200px]">
             <div className="relative flex items-center gap-2">
               <span className="text-2xl">{event.icon}</span>
               <div>

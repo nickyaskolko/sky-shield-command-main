@@ -1,0 +1,27 @@
+---
+description: Do not change detection and interception logic - radar-only detection, interception only in battery range circle
+alwaysApply: true
+---
+
+# Detection and Interception Logic - Do Not Change
+
+**Required:** Do not change the detection (gילוי) or interception (יירוט) logic in the game.
+
+## Detection
+
+- Threats are detected **only** when they are inside a radar zone (or full coverage) in the **current frame**.
+- No persistence of `isDetected` across frames.
+- Relevant code: `src/store/gameStore.ts` – `threatsWithDetection` / `isDetected`.
+
+## Interception
+
+- Each battery (and laser) engages **only** targets **inside its own range circle**.
+- Target selection is **only** via `findClosestThreatInRange` in `physics.ts`, which uses `isInRange(battery, threat, ...)`. Do not extend range or bypass the circle.
+- Relevant code: `src/store/gameStore.ts` (calls to `findClosestThreatInRange`), `src/lib/game/physics.ts` (`isInRange`, `findClosestThreatInRange`).
+
+## Summary
+
+- **Detection:** Radar (or full coverage) only; no persisting `isDetected` between frames.
+- **Interception:** Only targets inside each battery's range circle; no engagement outside the circle.
+
+Do not refactor or "improve" in a way that changes this behavior.

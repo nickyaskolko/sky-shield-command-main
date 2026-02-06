@@ -22,14 +22,14 @@ export function BuffsPanel() {
   const canAffordThaad = budget >= thaadCost;
 
   return (
-    <div className="absolute bottom-14 sm:bottom-20 left-1 sm:left-4 z-20 flex flex-col gap-1.5 sm:gap-2 pointer-events-auto max-w-[calc(100vw-2rem)]" dir="rtl">
+    <div className="absolute bottom-20 sm:bottom-20 left-1 sm:left-4 z-20 flex flex-col gap-1.5 sm:gap-2 pointer-events-auto max-w-[calc(100vw-2rem)] safe-area-inset-left" dir="rtl" style={{ paddingBottom: 'env(safe-area-inset-bottom)', marginLeft: 'env(safe-area-inset-left)' }}>
       <span className="text-game-text-dim text-[10px] sm:text-xs font-medium mb-0.5">באפים</span>
       <div className="flex flex-col gap-1 sm:gap-2">
         {fullAvailable && (
           <Button
             size="sm"
             variant="outline"
-            className="border-amber-500/50 text-amber-200 hover:bg-amber-500/20 bg-game-panel/90 text-[10px] sm:text-xs min-h-[34px] sm:min-h-[36px] py-1 px-2"
+            className="border-amber-500/50 text-amber-200 hover:bg-amber-500/20 bg-game-panel/90 text-[10px] sm:text-xs min-h-[44px] sm:min-h-[36px] py-2 px-2"
             onClick={() => activateFullCoverage(fullSeconds)}
           >
             <Radio className="h-3 w-3 sm:h-4 sm:w-4 ml-1 shrink-0" />
@@ -40,7 +40,7 @@ export function BuffsPanel() {
           <Button
             size="sm"
             variant="outline"
-            className="border-red-400/50 text-red-200 hover:bg-red-500/20 bg-game-panel/90 text-[10px] sm:text-xs min-h-[34px] sm:min-h-[36px] py-1 px-2"
+            className="border-red-400/50 text-red-200 hover:bg-red-500/20 bg-game-panel/90 text-[10px] sm:text-xs min-h-[44px] sm:min-h-[36px] py-2 px-2"
             onClick={() => addMorale(moraleAmount)}
           >
             <Heart className="h-3 w-3 sm:h-4 sm:w-4 ml-1 shrink-0" />
@@ -50,7 +50,7 @@ export function BuffsPanel() {
         <Button
           size="sm"
           variant="outline"
-          className="border-blue-400/50 text-blue-200 hover:bg-blue-500/20 bg-game-panel/90 disabled:opacity-50 text-[10px] sm:text-xs min-h-[34px] sm:min-h-[36px] py-1 px-2"
+          className="border-blue-400/50 text-blue-200 hover:bg-blue-500/20 bg-game-panel/90 disabled:opacity-50 text-[10px] sm:text-xs min-h-[44px] sm:min-h-[36px] py-2 px-2"
           onClick={() => startPlacingBattery('thaad')}
           disabled={!canAffordThaad}
         >

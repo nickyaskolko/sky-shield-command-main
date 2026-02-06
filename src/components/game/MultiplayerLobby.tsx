@@ -1,6 +1,6 @@
 // Multiplayer Lobby – צור חדר / הצטרף עם קוד
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Users, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ export function MultiplayerLobby({ multiplayer, onBack, onStartGame }: Multiplay
   const [copied, setCopied] = useState(false);
   const [joining, setJoining] = useState(false);
   const [creating, setCreating] = useState(false);
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     role,
@@ -31,31 +32,59 @@ export function MultiplayerLobby({ multiplayer, onBack, onStartGame }: Multiplay
     setRoomPlaying,
   } = multiplayer;
 
+  useEffect(() => {
+    return () => {
+      if (copiedTimerRef.current) {
+        clearTimeout(copiedTimerRef.current);
+        copiedTimerRef.current = null;
+      }
+    };
+  }, []);
+
   const handleCreateRoom = async () => {
     setCreating(true);
-    const result = await createRoom();
-    setCreating(false);
-    if (!result) return;
+    try {
+      const result = await createRoom();
+      if (!result) return;
+    } finally {
+      setCreating(false);
+    }
   };
 
   const handleJoinRoom = async () => {
     if (!joinCode.trim()) return;
     setJoining(true);
-    const result = await joinRoom(joinCode.trim());
-    setJoining(false);
-    if (!result) return;
+    try {
+      const result = await joinRoom(joinCode.trim());
+      if (!result) return;
+    } finally {
+      setJoining(false);
+    }
   };
 
   const handleStartGame = async () => {
-    await setRoomPlaying();
-    onStartGame();
+    try {
+      await setRoomPlaying();
+      onStartGame();
+    } catch {
+      // setRoomPlaying sets error in hook; loading state not used here
+    }
   };
 
   const copyCode = () => {
     if (!roomCode) return;
+    if (copiedTimerRef.current) {
+      clearTimeout(copiedTimerRef.current);
+      copiedTimerRef.current = null;
+    }
     navigator.clipboard.writeText(roomCode).then(() => {
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      copiedTimerRef.current = setTimeout(() => {
+        copiedTimerRef.current = null;
+        setCopied(false);
+      }, 2000);
+    }).catch(() => {
+      // clipboard permission or unsupported – ignore
     });
   };
 

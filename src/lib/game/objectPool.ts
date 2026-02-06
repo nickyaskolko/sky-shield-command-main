@@ -109,6 +109,35 @@ class ProjectilePool {
     this.activeSet.clear();
     // Keep the pool for reuse
   }
+
+  /** Restore active projectiles from a snapshot (e.g. multiplayer guest receiving host state). */
+  restoreFromSnapshot(projectiles: Projectile[]): void {
+    const active = Array.from(this.activeSet);
+    this.activeSet.clear();
+    for (const p of active) {
+      p.isActive = false;
+      p.trailPositions = [];
+      if (this.pool.length < this.MAX_POOL_SIZE) this.pool.push(p);
+    }
+    for (const data of projectiles) {
+      let projectile = this.pool.pop();
+      if (!projectile) projectile = this.createProjectile();
+      projectile.id = data.id;
+      projectile.batteryId = data.batteryId;
+      projectile.x = data.x;
+      projectile.y = data.y;
+      projectile.startX = data.startX;
+      projectile.startY = data.startY;
+      projectile.targetX = data.targetX;
+      projectile.targetY = data.targetY;
+      projectile.targetThreatId = data.targetThreatId;
+      projectile.speed = data.speed;
+      projectile.angle = data.angle;
+      projectile.trailPositions = Array.isArray(data.trailPositions) ? [...data.trailPositions] : [];
+      projectile.isActive = true;
+      this.activeSet.add(projectile);
+    }
+  }
 }
 
 // Singleton instance

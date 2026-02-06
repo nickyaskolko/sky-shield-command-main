@@ -8,6 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { loadGameConfigOverrides } from "@/lib/game/gameConfigLoader";
 import { fetchStoryChapters } from "@/lib/game/storyMode";
+import { ApplyAppSettings } from "@/components/ApplyAppSettings";
 import Index from "./pages/Index";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
@@ -31,9 +32,20 @@ const App = () => {
     init();
   }, []);
 
+  useEffect(() => {
+    const onUnhandled = (e: PromiseRejectionEvent) => {
+      if (typeof console !== 'undefined' && console.error) {
+        console.error('[Unhandled Rejection]', e.reason);
+      }
+    };
+    window.addEventListener('unhandledrejection', onUnhandled);
+    return () => window.removeEventListener('unhandledrejection', onUnhandled);
+  }, []);
+
   return (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
+      <ApplyAppSettings />
       <TooltipProvider>
         <Toaster />
         <Sonner />

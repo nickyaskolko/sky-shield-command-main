@@ -1,7 +1,7 @@
-// Settings Modal - הגדרות (עוצמת קול, שפה, נושא)
+// Settings Modal - הגדרות (עוצמת קול, שפה, נושא, עיצוב לאדמין/תורם)
 
 import { useEffect } from 'react';
-import { Volume2, Languages, Sun, Moon } from 'lucide-react';
+import { Volume2, Languages, Sun, Moon, Palette } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { usePlayerStore } from '@/store/playerStore';
 import { soundManager } from '@/lib/audio/SoundManager';
+import { useUserRole, maxDesignThemeOption } from '@/hooks/useUserRole';
 import { t } from '@/lib/i18n/he';
 
 interface SettingsModalProps {
@@ -20,13 +21,16 @@ interface SettingsModalProps {
 }
 
 export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
-  const settings = usePlayerStore((s) => s.settings ?? { volume: 0.5, language: 'he', theme: 'dark', highContrast: false, fontSize: 'normal', reduceMotion: false });
+  const settings = usePlayerStore((s) => s.settings ?? { volume: 0.5, language: 'he', theme: 'dark', highContrast: false, fontSize: 'normal', reduceMotion: false, designTheme: '1' });
   const setVolume = usePlayerStore((s) => s.setVolume);
   const setLanguage = usePlayerStore((s) => s.setLanguage);
   const setTheme = usePlayerStore((s) => s.setTheme);
   const setHighContrast = usePlayerStore((s) => s.setHighContrast);
   const setFontSize = usePlayerStore((s) => s.setFontSize);
   const setReduceMotion = usePlayerStore((s) => s.setReduceMotion);
+  const setDesignTheme = usePlayerStore((s) => s.setDesignTheme);
+  const userRole = useUserRole();
+  const maxTheme = maxDesignThemeOption(userRole);
 
   useEffect(() => {
     soundManager.setVolume(settings.volume);
@@ -162,6 +166,46 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               </div>
             </div>
           </div>
+
+          {/* Design theme – אדמין/תורם בלבד */}
+          {maxTheme >= 1 && (
+            <div className="flex items-center gap-4">
+              <Palette className="h-5 w-5 text-game-accent shrink-0" />
+              <div className="flex-1">
+                <label className="text-sm text-game-text-dim block mb-2">{t('designTheme')}</label>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant={settings.designTheme === '1' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setDesignTheme('1')}
+                    className={settings.designTheme === '1' ? 'bg-game-accent text-game-panel' : ''}
+                  >
+                    {t('designTheme1')}
+                  </Button>
+                  {maxTheme >= 2 && (
+                    <Button
+                      variant={settings.designTheme === '2' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setDesignTheme('2')}
+                      className={settings.designTheme === '2' ? 'bg-game-accent text-game-panel' : ''}
+                    >
+                      {t('designTheme2')}
+                    </Button>
+                  )}
+                  {maxTheme >= 3 && (
+                    <Button
+                      variant={settings.designTheme === '3' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setDesignTheme('3')}
+                      className={settings.designTheme === '3' ? 'bg-game-accent text-game-panel' : ''}
+                    >
+                      {t('designTheme3')}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex justify-center pt-2">

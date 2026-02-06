@@ -68,7 +68,7 @@ export function BatteryInfo({ battery, budget, ammoPool, onReload, onClose }: Ba
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 20 }}
-      className="absolute top-1/2 left-2 sm:left-4 -translate-y-1/2 bg-game-panel/95 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-game-accent/30 w-64 max-w-[calc(100vw-1rem)] pointer-events-auto z-20 shadow-xl shadow-black/30"
+      className="absolute top-[55%] left-2 sm:left-4 -translate-y-1/2 bg-game-panel/95 backdrop-blur-sm rounded-xl p-3 sm:p-4 border border-game-accent/30 w-64 max-w-[min(280px,calc(100vw-1.5rem))] pointer-events-auto z-20 shadow-xl shadow-black/30"
       dir="rtl"
     >
       {/* Header */}

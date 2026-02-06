@@ -3,7 +3,18 @@
 export const he = {
   // Game title
   gameTitle: 'מגן השמיים',
-  
+  gameDescription: 'משחק חשיבה והגנה אסטרטגי',
+
+  designTheme: 'עיצוב ממשק',
+  designTheme1: 'ברירת מחדל (ציאן)',
+  designTheme2: 'זהוב',
+  designTheme3: 'סגול',
+
+  /** דרגות תורם: ברונזה, זהב, פלטינום */
+  donorTier1: 'ברונזה',
+  donorTier2: 'זהב',
+  donorTier3: 'פלטינום',
+
   // Main menu
   startGame: 'התחל משחק',
   continue: 'המשך',

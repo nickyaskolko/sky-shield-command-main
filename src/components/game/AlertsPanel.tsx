@@ -33,10 +33,11 @@ export function AlertsPanel({ className }: AlertsPanelProps) {
   return (
     <div
       className={cn(
-        'absolute right-1 sm:right-4 top-1/2 -translate-y-1/2 w-32 sm:w-56 max-h-[40vh] sm:max-h-[50vh] flex flex-col rounded-md sm:rounded-lg border border-game-accent/30 bg-game-panel/90 backdrop-blur-sm text-[10px] sm:text-sm z-10 pointer-events-auto',
+        'absolute right-1 sm:right-4 top-1/2 -translate-y-1/2 w-24 max-w-[28vw] sm:w-56 sm:max-w-none max-h-[32vh] sm:max-h-[50vh] flex flex-col rounded-md sm:rounded-lg border border-game-accent/30 bg-game-panel/90 backdrop-blur-sm text-[10px] sm:text-sm z-10 pointer-events-auto safe-area-inset-right',
         className
       )}
       dir="rtl"
+      style={{ marginRight: 'max(0.25rem, env(safe-area-inset-right))' }}
     >
       <div className="shrink-0 px-2 sm:px-3 pt-2 sm:pt-3 pb-1 border-b border-game-accent/20 bg-game-panel/95 rounded-t-md sm:rounded-t-lg">
         <span className="text-game-accent font-medium">התראות</span>

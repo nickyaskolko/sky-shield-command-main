@@ -904,10 +904,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
         updateThreatPosition(threat, deltaTime);
       }
 
-      // 2) Run detection: land = circle (and sector if radar by sea); naval = sector only. Instant via segment-intersection.
+      // 2) Detection: only by radar (or full coverage). Target is detected only when currently inside a radar zone this frame – no persistence so interception cannot "see" targets the radar did not detect.
       const effectiveRange = (r: { type: string; range: number }) => (r.range ?? 0) * eventRadarMod * DETECTION_RANGE_MARGIN;
       const threatsWithDetection = movedThreats.map((threat, i) => {
-        let isDetected = threat.isDetected || fullCoverageActive;
+        let isDetected = fullCoverageActive;
         const prev = prevPositions[i];
         if (!isDetected && s.radars.length > 0) {
           for (const radar of s.radars) {
@@ -933,11 +933,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
               }
             }
           }
-        }
-        // גילוי אוטומטי כשמטרה מתקרבת לעיר (כיסוי טבריה וצפון־מזרח – מסלול שלא תמיד נכנס למעגל רדאר)
-        if (!isDetected) {
-          const targetCity = s.cities.find(c => c.id === threat.targetCityId);
-          if (targetCity && distance(threat, targetCity) <= 220) isDetected = true;
         }
         return { ...threat, isDetected };
       });
@@ -1053,20 +1048,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
           }
         }
         
-        // Only target if: threat is detected AND (battery in radar coverage OR full coverage OR battery "defending" target city – סוללה ליד עיר יכולה לירות על מטרות לעיר גם בלי רדאר)
+        // Interception only after radar has detected: battery must be in radar coverage (or full coverage) to receive target data and fire.
         const inRadarZone = s.radars.some(radar => {
           const range = radar.range ?? 0;
           const inCircle = (() => { const dx = battery.x - radar.x; const dy = battery.y - radar.y; return dx * dx + dy * dy <= range * range; })();
           const inSector = isInNavalRadarSector(radar.x, radar.y, battery.x, battery.y, range);
           return radar.type === 'naval' ? inSector : inCircle || (isRadarBySea(radar.x, s.canvasWidth) && inSector);
         });
-        const defendingTargetedCity = s.cities.some(city => {
-          const threatToCity = updatedThreats.find(t => t.isDetected && t.targetCityId === city.id);
-          if (!threatToCity) return false;
-          if (!findClosestThreatInRange(battery, [threatToCity], s.upgrades.radarRange)) return false;
-          return distance(battery, city) <= battery.range * 2;
-        });
-        const batteryInRadarCoverage = fullCoverageActive || inRadarZone || defendingTargetedCity;
+        const batteryInRadarCoverage = fullCoverageActive || inRadarZone;
         const poolAmmo = battery.type === 'shortRange' ? newAmmoPool.shortRange : battery.type === 'mediumRange' ? newAmmoPool.mediumRange : battery.type === 'longRange' ? newAmmoPool.longRange : battery.type === 'thaad' ? (updatedBattery.ammo ?? 0) : battery.type === 'david' ? (updatedBattery.ammo ?? 0) : battery.type === 'arrow2' ? (updatedBattery.ammo ?? 0) : 0;
         const baseReloadTime = battery.type === 'shortRange' ? getGameConfig().SHORT_RANGE.reloadTime : battery.type === 'mediumRange' ? getGameConfig().MEDIUM_RANGE.reloadTime : battery.type === 'longRange' ? getGameConfig().LONG_RANGE.reloadTime : battery.type === 'thaad' ? (getGameConfig().THAAD?.reloadTime ?? 2500) : battery.type === 'david' ? (getGameConfig().DAVID?.reloadTime ?? 1800) : battery.type === 'arrow2' ? (getGameConfig().ARROW2?.reloadTime ?? 1900) : 0;
         const reloadCooldownMs = baseReloadTime > 0 ? getEffectiveReloadTime(baseReloadTime, s.upgrades.reloadSpeed) : 0;
@@ -1075,6 +1064,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           const availableThreats = updatedThreats.filter(t =>
             !alreadyTargetedThreats.has(t.id) && t.isDetected
           );
+          // Interception only within this battery's range circle (findClosestThreatInRange uses isInRange with battery.range)
           const target = findClosestThreatInRange(
             battery,
             availableThreats,
@@ -1100,6 +1090,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           const availableThreats = updatedThreats.filter(t =>
             !alreadyTargetedThreats.has(t.id) && t.isDetected
           );
+          // Laser intercepts only within its range circle
           const target = findClosestThreatInRange(
             battery,
             availableThreats,
@@ -1340,7 +1331,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       cities: [...s.cities],
       threats: s.threats.map(t => ({ ...t, trailPositions: [...(t.trailPositions || [])] })),
       batteries: s.batteries.map(b => ({ ...b })),
-      projectiles: s.projectiles.map(p => ({ ...p, trailPositions: [...(p.trailPositions || [])] })),
+      projectiles: projectilePool.getActive().map(p => ({ ...p, trailPositions: [...(p.trailPositions || [])] })),
       explosions: s.explosions.map(e => ({ ...e, particles: [...(e.particles || [])] })),
       laserBeams: s.laserBeams.map(l => ({ ...l })),
       radars: s.radars.map(r => ({ ...r })),
@@ -1382,6 +1373,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   replaceStateFromHost: (snapshot) => {
+    // Always apply snapshot to store first so guest state stays in sync even if pool restore fails
     set({
       phase: snapshot.phase,
       budget: snapshot.budget,
@@ -1426,5 +1418,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
       activeEventStartedAt: snapshot.activeEventStartedAt,
       thaadExtraAmmo: snapshot.thaadExtraAmmo,
     });
+    try {
+      projectilePool.restoreFromSnapshot(snapshot.projectiles ?? []);
+    } catch (e) {
+      console.warn('replaceStateFromHost: projectile pool restore failed', e);
+    }
   },
 }));

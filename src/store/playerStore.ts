@@ -71,6 +71,8 @@ export interface PlayerProfile {
     highContrast?: boolean;
     fontSize?: 'normal' | 'large';
     reduceMotion?: boolean;
+    /** עיצוב ממשק – 1/2/3 (אדמין/תורם: בחירה לפי רול) */
+    designTheme?: '1' | '2' | '3';
   };
   /** Admin only: when true, morale never causes game over */
   godMode: boolean;
@@ -196,6 +198,7 @@ const createDefaultProfile = (): PlayerProfile => ({
     highContrast: false,
     fontSize: 'normal',
     reduceMotion: false,
+    designTheme: '1',
   },
   godMode: false,
   dailyRewardLastClaimed: null,
@@ -224,6 +227,7 @@ interface PlayerStore extends PlayerProfile {
   setHighContrast: (v: boolean) => void;
   setFontSize: (v: 'normal' | 'large') => void;
   setReduceMotion: (v: boolean) => void;
+  setDesignTheme: (v: '1' | '2' | '3') => void;
   setGodMode: (v: boolean) => void;
   /** Claim today's daily reward. Returns { claimed, reward?: { diamonds, day } }. */
   claimDailyReward: () => { claimed: boolean; reward?: { diamonds: number; day: number } };
@@ -384,6 +388,9 @@ export const usePlayerStore = create<PlayerStore>()(
       },
       setReduceMotion: (v) => {
         set((s) => ({ settings: { ...s.settings, reduceMotion: v } }));
+      },
+      setDesignTheme: (v) => {
+        set((s) => ({ settings: { ...s.settings, designTheme: v } }));
       },
       setGodMode: (v) => {
         set({ godMode: v });

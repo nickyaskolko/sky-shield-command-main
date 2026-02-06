@@ -24,6 +24,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [nickname, setNickname] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [magicSent, setMagicSent] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -33,6 +34,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
     setMagicSent(false);
     setPassword('');
     setConfirmPassword('');
+    setNickname('');
   };
 
   const handleClose = () => {
@@ -44,15 +46,25 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const { error: err } = await signIn(email, password);
-    setLoading(false);
-    if (err) setError(err.message);
-    else handleClose();
+    try {
+      const { error: err } = await signIn(email, password);
+      if (err) setError(err.message);
+      else handleClose();
+    } catch {
+      setError('שגיאה בהתחברות. נסה שוב.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    const trimmedNickname = nickname.trim();
+    if (!trimmedNickname) {
+      setError('חובה למלא כינוי');
+      return;
+    }
     if (password !== confirmPassword) {
       setError('הסיסמאות אינן תואמות');
       return;
@@ -62,12 +74,17 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
       return;
     }
     setLoading(true);
-    const { error: err } = await signUp(email, password);
-    setLoading(false);
-    if (err) setError(err.message);
-    else {
-      setError(null);
-      setMagicSent(true);
+    try {
+      const { error: err } = await signUp(email, password, trimmedNickname);
+      if (err) setError(err.message);
+      else {
+        setError(null);
+        setMagicSent(true);
+      }
+    } catch {
+      setError('שגיאה בהרשמה. נסה שוב.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -75,12 +92,17 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const { error: err } = await signInWithOtp(email);
-    setLoading(false);
-    if (err) setError(err.message);
-    else {
-      setMagicSent(true);
-      setError(null);
+    try {
+      const { error: err } = await signInWithOtp(email);
+      if (err) setError(err.message);
+      else {
+        setMagicSent(true);
+        setError(null);
+      }
+    } catch {
+      setError('שגיאה בשליחת קישור. נסה שוב.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -162,6 +184,19 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
               </p>
             ) : (
               <form onSubmit={handleSignUp} className="space-y-4">
+                <div>
+                  <Label htmlFor="reg-nickname">כינוי *</Label>
+                  <Input
+                    id="reg-nickname"
+                    type="text"
+                    value={nickname}
+                    onChange={(e) => setNickname(e.target.value)}
+                    placeholder="כינוי להצגה במשחק"
+                    className="bg-game-bg/50 border-game-accent/30 mt-1"
+                    required
+                    minLength={1}
+                  />
+                </div>
                 <div>
                   <Label htmlFor="reg-email">אימייל</Label>
                   <Input
